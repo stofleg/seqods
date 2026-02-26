@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>SeqOds</title>
+  <style>
+    :root{
+      --bg0:#f6f8ff; --bg1:#ffffff;
+      --card: rgba(255,255,255,.78);
+      --stroke: rgba(16,24,40,.14);
+      --shadow: 0 18px 50px rgba(16,24,40,.12);
+      --shadow2: 0 10px 24px rgba(16,24,40,.10);
+      --txt:#0b1220; --muted:#50607a;
+      --accent:#2f7df6; --accent2:#38c6c6;
+      --ok:#1a8f3d; --warn:#a56a00; --danger:#c62828;
+      --chip:#eef4ff; --chipStroke: rgba(47,125,246,.22);
+      --slot: rgba(255,255,255,.72);
+      --slotStroke: rgba(16,24,40,.12);
+      --tool: rgba(255,255,255,.84);
+      --toolStroke: rgba(16,24,40,.14);
+      --focus: rgba(47,125,246,.35);
+      --radius: 18px;
+    }
+    @media (prefers-color-scheme: dark){
+      :root{
+        --bg0:#070a12; --bg1:#0b1020;
+        --card: rgba(18,24,44,.72);
+        --stroke: rgba(255,255,255,.12);
+        --shadow: 0 18px 50px rgba(0,0,0,.55);
+        --shadow2: 0 10px 24px rgba(0,0,0,.45);
+        --txt:#eaf0ff; --muted:#aebad5;
+        --accent:#69a7ff; --accent2:#4fe2e2;
+        --ok:#65e08a; --warn:#ffd479; --danger:#ff6b6b;
+        --chip: rgba(105,167,255,.12);
+        --chipStroke: rgba(105,167,255,.22);
+        --slot: rgba(18,24,44,.72);
+        --slotStroke: rgba(255,255,255,.12);
+        --tool: rgba(18,24,44,.78);
+        --toolStroke: rgba(255,255,255,.12);
+        --focus: rgba(105,167,255,.42);
+      }
+    }
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--txt);
+      background:
+        radial-gradient(1200px 900px at 20% 0%, rgba(47,125,246,.20), transparent 50%),
+        radial-gradient(900px 700px at 90% 20%, rgba(56,198,198,.16), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    .wrap{ max-width: 620px; margin: 0 auto; padding: 10px 10px calc(10px + env(safe-area-inset-bottom)); }
+    .card{
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      overflow:hidden;
+    }
+
+    .topBar{ padding: 10px 10px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+    .title{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+    .title h1{ margin:0; font-size: 16px; font-weight: 900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .title .sub{ margin:0; font-size: 12px; color: var(--muted); }
+
+    .rightCol{ display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
+    .chipRow{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+    .chip{
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--chip);
+      border: 1px solid var(--chipStroke);
+      font-weight: 850;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .chip strong{ font-variant-numeric: tabular-nums; }
+    .btn{
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,.08);
+      color: var(--txt);
+      border-radius: 12px;
+      padding: 9px 10px;
+      font-weight: 900;
+      font-size: 13px;
+      box-shadow: var(--shadow2);
+    }
+    @media (prefers-color-scheme: light){ .btn{ background: rgba(255,255,255,.78); } }
+    .btn:active{ transform: translateY(1px); }
+    .btn:focus{ outline:none; box-shadow: 0 0 0 4px var(--focus), var(--shadow2); }
+    .btnDanger{
+      background: rgba(198,40,40,.12);
+      border-color: rgba(198,40,40,.35);
+      color: var(--danger);
+    }
+    .divider{ height:1px; background: var(--stroke); }
+
+    .progressWrap{ display:flex; flex-direction:column; gap:8px; width: 220px; max-width: 48vw; }
+    .progLine{ display:flex; flex-direction:column; gap:6px; }
+    .progLabel{ display:flex; justify-content:space-between; gap:8px; font-size: 11px; color: var(--muted); font-weight: 800; }
+    .bar{ height: 9px; border-radius: 999px; background: rgba(127,127,127,.18); border: 1px solid var(--stroke); overflow:hidden; }
+    .fill{ height:100%; width:0%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width .35s ease; }
+    .fill.green{ background: linear-gradient(90deg, rgba(26,143,61,.95), rgba(56,198,198,.95)); }
+
+    .content{ padding: 10px; }
+    .boundBtn{
+      width:100%;
+      border: 1px solid var(--stroke);
+      background: linear-gradient(135deg, rgba(47,125,246,.18), rgba(56,198,198,.14));
+      border-radius: 999px;
+      padding: 10px 12px;
+      text-align:center;
+      font-size: clamp(16px, 5.6vw, 26px);
+      font-weight: 950;
+      box-shadow: var(--shadow2);
+      cursor:pointer;
+      user-select:none;
+      color: var(--txt);
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+    }
+    @media (prefers-color-scheme: dark){
+      .boundBtn{ color:#fff; text-shadow: 0 2px 10px rgba(0,0,0,.6); }
+    }
+
+    ol#liste{
+      list-style:none;
+      padding:0;
+      margin: 10px 0;
+      display:flex;
+      flex-direction:column;
+      gap: 8px;
+    }
+    .slot{ display:flex; align-items:stretch; gap: 8px; }
+    .slotMain{
+      flex: 1 1 auto;
+      border: 1px solid var(--slotStroke);
+      border-radius: 999px;
+      background: var(--slot);
+      box-shadow: var(--shadow2);
+      min-height: 40px;
+      display:flex;
+      overflow:hidden;
+      position: relative;
+    }
+    .slotWordBtn{
+      width:100%;
+      border:0;
+      background: transparent;
+      border-radius: 999px;
+      padding: 8px 12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      font-size: clamp(13px, 3.6vw, 16px);
+      font-weight: 900;
+      color: var(--txt);
+      cursor:pointer;
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+    }
+    .slotHint{
+      position:absolute;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding: 0 12px;
+      font-size: clamp(13px, 3.6vw, 16px);
+      font-weight: 950;
+      opacity: .22;
+      pointer-events:none;
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+    }
+    .slotTools{ display:flex; flex: 0 0 auto; gap: 6px; align-items:stretch; }
+    .toolBtn{
+      width: 46px;
+      border-radius: 14px;
+      border: 1px solid var(--toolStroke);
+      background: var(--tool);
+      box-shadow: var(--shadow2);
+      padding: 0;
+      font-size: 12px;
+      font-weight: 950;
+      color: var(--txt);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      user-select:none;
+    }
+    .toolBtn:disabled{ opacity:.45; cursor: default; box-shadow:none; }
+    @media (prefers-color-scheme: light){
+      .toolBtn[data-tool="len"]{ background: linear-gradient(135deg,#e8f1ff,#d6e7ff); border-color:#bcd6ff; color:#174ea6; }
+      .toolBtn[data-tool="tirage"]{ background: linear-gradient(135deg,#e6fffb,#ccfbf1); border-color:#9debe0; color:#0f766e; }
+      .toolBtn[data-tool="def"]{ background: linear-gradient(135deg,#fff4e6,#ffe2c7); border-color:#ffd2a8; color:#9a3412; }
+    }
+
+    .inputCard{
+      padding: 10px;
+      border-top: 1px solid var(--stroke);
+      background: rgba(255,255,255,.04);
+    }
+    @media (prefers-color-scheme: light){ .inputCard{ background: rgba(255,255,255,.55); } }
+
+    .controls{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    input{
+      flex: 1 1 auto;
+      min-width: 170px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,.70);
+      color: var(--txt);
+      font-size: 16px;
+      outline:none;
+      box-shadow: var(--shadow2);
+    }
+    @media (prefers-color-scheme: dark){ input{ background: rgba(18,24,44,.78); } }
+    input:focus{ box-shadow: 0 0 0 4px var(--focus), var(--shadow2); }
+
+    .msg{ margin-top: 8px; min-height: 18px; font-size: 13px; color: var(--muted); }
+    .msg.ok{ color: var(--ok); } .msg.warn{ color: var(--warn); }
+
+    /* Mobile composer + keyboard */
+    #mobileCompose{ display:none; width:100%; }
+    .composeRow{ display:flex; gap:8px; align-items:center; width:100%; }
+    .composeBox{
+      flex: 1 1 auto;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,.70);
+      color: var(--txt);
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: .6px;
+      box-shadow: var(--shadow2);
+      min-height: 40px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      user-select:none;
+      overflow:hidden;
+      white-space:nowrap;
+      text-overflow:ellipsis;
+    }
+    @media (prefers-color-scheme: dark){ .composeBox{ background: rgba(18,24,44,.78);} }
+
+    .kb{ display:flex; flex-direction:column; gap: 6px; width:100%; margin-top: 8px; }
+    .kbRow{ display:flex; gap:6px; justify-content:center; }
+    .kbRow.row2{ margin-left: 10px; }
+    .kbRow.row3{ margin-left: 20px; }
+    .kbBtn{
+      width: 32px;
+      height: 36px;
+      border: 1px solid var(--stroke);
+      border-radius: 12px;
+      background: rgba(255,255,255,.78);
+      box-shadow: var(--shadow2);
+      font-weight: 950;
+      font-size: 14px;
+      color: var(--txt);
+      user-select:none;
+    }
+    @media (prefers-color-scheme: dark){ .kbBtn{ background: rgba(18,24,44,.78); } }
+    .kbBtn:active{ transform: translateY(1px); }
+
+    /* Modal définitions (centrée, plein écran en largeur) */
+    .modal{ position:fixed; inset:0; display:none; z-index: 50; }
+    .modal.open{ display:block; }
+    .backdrop{ position:absolute; inset:0; background: rgba(0,0,0,.45); }
+    @media (prefers-color-scheme: dark){ .backdrop{ background: rgba(0,0,0,.60); } }
+    .panel{
+      position: fixed;
+      left: 10px; right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      max-width: 620px;
+      margin: 0 auto;
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 12px;
+      max-height: calc(100svh - 20px);
+      overflow:auto;
+    }
+    .panelTop{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+    .panel h2{ margin:0; font-size: 18px; font-weight: 950; }
+    .panel p{ margin: 10px 0 0; font-size: 14px; line-height: 1.35; white-space: pre-wrap; }
+
+    /* Mobile strict : pas de scroll page, tout tient */
+    @media (max-width: 900px) and (pointer: coarse){
+      body{ overflow:hidden; }
+      .wrap{ height: 100vh; padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+
+      .card{
+        height: 100%;
+        display:flex;
+        flex-direction:column;
+      }
+
+      .content{
+        flex: 1 1 auto;
+        display:flex;
+        flex-direction:column;
+        min-height:0;
+        gap:8px;
+      }
+
+      /* scroll uniquement entre les bornes */
+      #liste{
+        flex: 1 1 auto;
+        min-height:0;
+        overflow:auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 6px 0;
+      }
+
+      .inputCard{
+        flex: 0 0 auto;
+      }
+
+      #saisie, #btnValider{ display:none !important; }
+      #mobileCompose{ display:block !important; }
+
+      .progressWrap{ display:none; }
+      .slotMain{ min-height: 36px; }
+      .toolBtn{ width: 42px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="topBar">
+        <div class="title">
+          <h1>SeqOds</h1>
+          <p class="sub">Progression locale</p>
+        </div>
+        <div class="rightCol">
+          <div class="chipRow">
+            <div class="chip">Progression&nbsp;: <strong id="compteur">0/10</strong></div>
+            <button id="btnNouveau" class="btn" type="button">Nouveau</button>
+          </div>
+          <div class="progressWrap" aria-label="Progression globale">
+            <div class="progLine">
+              <div class="progLabel"><span>Listes vues</span><span id="seenCount">0/0</span></div>
+              <div class="bar"><div class="fill" id="seenBar"></div></div>
+            </div>
+            <div class="progLine">
+              <div class="progLabel"><span>Listes validées</span><span id="valCount">0/0</span></div>
+              <div class="bar"><div class="fill green" id="valBar"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="content">
+        <button id="borneA" class="boundBtn" type="button"></button>
+        <ol id="liste" aria-label="Liste des 10 solutions"></ol>
+        <button id="borneB" class="boundBtn" type="button"></button>
+      </div>
+
+      <div class="inputCard">
+        <div class="controls">
+          <input id="saisie" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="Saisie" />
+          <button id="btnValider" class="btn" type="button">Valider</button>
+          <button id="btnSolutions" class="btn btnDanger" type="button">Solutions</button>
+
+          <div id="mobileCompose">
+            <div class="composeRow">
+              <div class="composeBox" id="composeBox">—</div>
+              <button id="btnBack" class="btn" type="button">⌫</button>
+              <button id="btnClear" class="btn" type="button">Effacer</button>
+              <button id="btnValiderMobile" class="btn" type="button">Valider</button>
+              <button id="btnSolutionsMobile" class="btn btnDanger" type="button">Solutions</button>
+            </div>
+            <div id="kb" class="kb" aria-label="Clavier"></div>
+          </div>
+        </div>
+        <div class="msg" id="msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="defModal" role="dialog" aria-modal="true" aria-labelledby="defTitle">
+    <div class="backdrop" id="defBackdrop"></div>
+    <div class="panel">
+      <div class="panelTop">
+        <h2 id="defTitle"></h2>
+        <button id="defClose" class="btn" type="button">Fermer</button>
+      </div>
+      <p id="defBody"></p>
+      <div id="anaWrap" style="margin-top:10px; color:var(--muted); font-size:13px; line-height:1.35;">
+        <strong style="color:var(--txt);">Anagrammes</strong>
+        <div id="defAna" style="margin-top:6px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="endModal" role="dialog" aria-modal="true" aria-labelledby="endTitle">
+    <div class="backdrop" id="endBackdrop"></div>
+    <div class="panel">
+      <div class="panelTop">
+        <h2 id="endTitle">Jeu terminé</h2>
+        <button id="btnCloseEnd" class="btn" type="button">Fermer</button>
+      </div>
+      <p style="margin:10px 0 0; color:var(--muted); line-height:1.35;">Toutes les listes sont validées sans aide.</p>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
