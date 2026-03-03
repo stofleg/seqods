@@ -10,11 +10,8 @@ const $ = (s)=>document.querySelector(s);
 const DROPBOX_APP_KEY = "5r5cxyemzt778me";
 const DROPBOX_STATE_PATH = "/state.json";
 
-// stockage tokens + pkce
-const LS_TOKENS = "SEQODS_DBX_TOKENS_V2";
-const LS_PKCE = "SEQODS_DBX_PKCE_V1";
-
-// état local
+const LS_TOKENS = "SEQODS_DBX_TOKENS_V3";
+const LS_PKCE  = "SEQODS_DBX_PKCE_V2";
 const STORE_LOCAL = "SEQODS_LOCAL_STATE_V3";
 
 /* ===========================
@@ -41,12 +38,11 @@ function addDays(ymd, days){
 function setMessage(t,cls){
   const el=$("#msg");
   if(!el) return;
-  el.textContent=t||"";
-  el.className=cls?`msg ${cls}`:"msg";
+  el.textContent = t || "";
+  el.className = cls ? `msg ${cls}` : "msg";
 }
 
 function currentRedirectUri(){
-  // EXACTEMENT la page actuelle sans query/hash (stable iOS)
   const u = new URL(window.location.href);
   u.search = "";
   u.hash = "";
@@ -65,7 +61,7 @@ function loadLocal(){
 }
 
 function saveLocal(st){
-  localStorage.setItem(STORE_LOCAL, JSON.stringify(st));
+  try{ localStorage.setItem(STORE_LOCAL, JSON.stringify(st)); }catch{}
 }
 
 /* ===========================
@@ -83,11 +79,14 @@ function nextInterval(cur){
    DROPBOX TOKENS
 =========================== */
 
-function saveTokens(t){ localStorage.setItem(LS_TOKENS, JSON.stringify(t)); }
-function loadTokens(){ try{return JSON.parse(localStorage.getItem(LS_TOKENS)||"null");}catch{return null;} }
+function saveTokens(t){ try{ localStorage.setItem(LS_TOKENS, JSON.stringify(t)); }catch{} }
+function loadTokens(){
+  try{ return JSON.parse(localStorage.getItem(LS_TOKENS)||"null"); }
+  catch{ return null; }
+}
 
 /* ===========================
-   PKCE (SYNC) — stable au clic + stable iOS
+   PKCE (SYNC)
 =========================== */
 
 function base64urlFromBytes(bytes){
@@ -103,23 +102,23 @@ function randomVerifier(len=64){
 }
 
 function sha256Sync(ascii){
-  function rightRotate(value, amount){ return (value>>>amount) | (value<<(32-amount)); }
+  function rightRotate(v, a){ return (v>>>a) | (v<<(32-a)); }
   const mathPow = Math.pow;
   const maxWord = mathPow(2, 32);
 
   const words = [];
-  const asciiBitLength = ascii.length * 8;
+  const bitLen = ascii.length * 8;
 
   const hash = sha256Sync.h = sha256Sync.h || [];
   const k = sha256Sync.k = sha256Sync.k || [];
-  let primeCounter = k.length;
+  let pc = k.length;
 
-  const isComposite = {};
-  for (let candidate = 2; primeCounter < 64; candidate++) {
-    if (!isComposite[candidate]) {
-      for (let i = 0; i < 313; i += candidate) isComposite[i] = candidate;
-      hash[primeCounter] = (mathPow(candidate, .5) * maxWord) | 0;
-      k[primeCounter++] = (mathPow(candidate, 1/3) * maxWord) | 0;
+  const isComp = {};
+  for (let c = 2; pc < 64; c++) {
+    if (!isComp[c]) {
+      for (let i = 0; i < 313; i += c) isComp[i] = c;
+      hash[pc] = (mathPow(c, .5) * maxWord) | 0;
+      k[pc++]  = (mathPow(c, 1/3) * maxWord) | 0;
     }
   }
 
@@ -129,17 +128,18 @@ function sha256Sync(ascii){
     const j = ascii.charCodeAt(i);
     words[i>>2] |= j << ((3 - i) % 4) * 8;
   }
-  words[words.length] = (asciiBitLength / maxWord) | 0;
-  words[words.length] = (asciiBitLength) | 0;
+  words[words.length] = (bitLen / maxWord) | 0;
+  words[words.length] = (bitLen) | 0;
 
   for (let j = 0; j < words.length; ) {
     const w = words.slice(j, j += 16);
-    const oldHash = hash.slice(0);
+    const old = hash.slice(0);
 
     for (let i = 0; i < 64; i++) {
       const w15 = w[i - 15], w2 = w[i - 2];
       const a = hash[0], e = hash[4];
-      const temp1 = (hash[7]
+
+      const t1 = (hash[7]
         + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25))
         + ((e & hash[5]) ^ ((~e) & hash[6]))
         + k[i]
@@ -151,16 +151,16 @@ function sha256Sync(ascii){
           ) | 0)
       ) | 0;
 
-      const temp2 = ((rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22))
+      const t2 = ((rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22))
         + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]))
       ) | 0;
 
-      hash.unshift((temp1 + temp2) | 0);
-      hash[4] = (hash[4] + temp1) | 0;
+      hash.unshift((t1 + t2) | 0);
+      hash[4] = (hash[4] + t1) | 0;
       hash.pop();
     }
 
-    for (let i = 0; i < 8; i++) hash[i] = (hash[i] + oldHash[i]) | 0;
+    for (let i = 0; i < 8; i++) hash[i] = (hash[i] + old[i]) | 0;
   }
 
   const out = new Uint8Array(32);
@@ -178,37 +178,59 @@ function codeChallengeFromVerifier(verifier){
 }
 
 /* ===========================
-   OAUTH DROPBOX (PKCE + localStorage)
+   PKCE STORE (window.name + localStorage secours)
 =========================== */
 
-function pkceSave(verifier, redirectUri){
-  localStorage.setItem(LS_PKCE, JSON.stringify({
-    verifier,
-    redirectUri,
-    ts: Date.now()
-  }));
+function pkceSave(payload){
+  // 1) window.name : survit aux redirects cross-domain (iOS-safe)
+  try{
+    window.name = "SEQODS_PKCE::" + JSON.stringify(payload);
+  }catch{}
+
+  // 2) localStorage : secours
+  try{
+    localStorage.setItem(LS_PKCE, JSON.stringify(payload));
+  }catch{}
 }
 
 function pkceLoad(){
+  // 1) window.name
   try{
-    const o = JSON.parse(localStorage.getItem(LS_PKCE)||"null");
-    if(!o) return null;
-    // TTL 10 minutes
-    if(Date.now() - (o.ts||0) > 10*60*1000) return null;
-    return o;
-  }catch{ return null; }
+    if(typeof window.name === "string" && window.name.startsWith("SEQODS_PKCE::")){
+      const raw = window.name.slice("SEQODS_PKCE::".length);
+      const obj = JSON.parse(raw);
+      return obj;
+    }
+  }catch{}
+
+  // 2) localStorage secours
+  try{
+    const obj = JSON.parse(localStorage.getItem(LS_PKCE)||"null");
+    return obj;
+  }catch{
+    return null;
+  }
 }
 
 function pkceClear(){
-  localStorage.removeItem(LS_PKCE);
+  try{
+    if(typeof window.name === "string" && window.name.startsWith("SEQODS_PKCE::")){
+      window.name = "";
+    }
+  }catch{}
+  try{ localStorage.removeItem(LS_PKCE); }catch{}
 }
+
+/* ===========================
+   OAUTH DROPBOX (PKCE)
+=========================== */
 
 function oauthStart(){
   const redirectUri = currentRedirectUri();
   const verifier = randomVerifier(64);
   const challenge = codeChallengeFromVerifier(verifier);
 
-  pkceSave(verifier, redirectUri);
+  pkceSave({ verifier, redirectUri, ts: Date.now() });
 
   const params = new URLSearchParams({
     response_type: "code",
@@ -217,7 +239,6 @@ function oauthStart(){
     code_challenge: challenge,
     code_challenge_method: "S256",
     token_access_type: "offline",
-    // scopes nécessaires pour lire/écrire state.json
     scope: "files.content.read files.content.write"
   });
 
@@ -233,7 +254,7 @@ async function handleOAuth(){
   pkceClear();
 
   if(!pk || !pk.verifier || !pk.redirectUri){
-    setMessage("Erreur OAuth Dropbox : PKCE manquant (iOS).", "err");
+    setMessage("Erreur OAuth Dropbox : PKCE introuvable après retour.", "err");
     return false;
   }
 
@@ -252,18 +273,28 @@ async function handleOAuth(){
   });
 
   if(!r.ok){
-    // On affiche le détail dans l’UI (crucial sur iPhone)
-    let details = "";
-    try{ details = await r.text(); }catch{}
-    console.error("Dropbox token error", r.status, details);
-    setMessage("Erreur OAuth Dropbox : " + (details || ("HTTP " + r.status)), "err");
+    // affiche la vraie erreur
+    let text = "";
+    let json = null;
+    try{
+      const ct = r.headers.get("content-type") || "";
+      if(ct.includes("application/json")) json = await r.json();
+      else text = await r.text();
+    }catch{}
+
+    const details =
+      (json && (json.error_description || json.error || JSON.stringify(json))) ||
+      text ||
+      ("HTTP " + r.status);
+
+    console.error("Dropbox /token error:", r.status, details);
+    setMessage("Erreur OAuth Dropbox : " + details, "err");
     return false;
   }
 
   const tok = await r.json();
   saveTokens(tok);
 
-  // nettoie l’URL
   url.searchParams.delete("code");
   url.searchParams.delete("state");
   window.history.replaceState({}, "", url.toString());
@@ -405,11 +436,8 @@ function wire(){
 
 async function start(){
   wire();
-
-  // Si retour OAuth (avec ?code=...)
   await handleOAuth();
 
-  // Recharge depuis Dropbox si possible
   const remote = await dbxDownload();
   if(remote){
     state = remote;
