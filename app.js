@@ -7,16 +7,11 @@ const $ = (s)=>document.querySelector(s);
 =========================== */
 const DROPBOX_APP_KEY = "5r5cxyemzt778me";
 const DROPBOX_STATE_PATH = "/state.json";
-
-// Archivage des cartes vues (un fichier texte par fiche)
 const DROPBOX_ARCHIVE_DIR = "/cartes_vues";
 
-// stockage tokens + pkce
-const LS_TOKENS = "SEQODS_DBX_TOKENS_V5";
-const LS_PKCE   = "SEQODS_DBX_PKCE_V4";
-
-// état local
-const STORE_LOCAL = "SEQODS_LOCAL_STATE_V5";
+const LS_TOKENS = "SEQODS_DBX_TOKENS_V6";
+const LS_PKCE   = "SEQODS_DBX_PKCE_V5";
+const STORE_LOCAL = "SEQODS_LOCAL_STATE_V6";
 
 /* ===========================
    UTIL
@@ -61,30 +56,34 @@ function defaultState(){
   return {
     updatedAt: Date.now(),
     dbxRev: null,
-    lists: {},           // seqIndex -> { due, interval, seen, validated, lastResult, lastSeen }
+    lists: {},
 
-    // Archivage Dropbox des cartes vues
-    archiveNext: 1,      // prochain numéro à attribuer
-    archiveBySeq: {}     // seqIndex -> numéro attribué
+    archiveNext: 1,
+    archiveBySeq: {},   // seqIndex -> { num, uploaded }
+
+    revisionSnoozeDate: "",
+
+    currentRun: null    // { seqIndex, found:[...], hintMode:[...], noHelpRun }
   };
 }
 function mergeDefaults(obj){
   const base = defaultState();
   if(!obj || typeof obj !== "object") return base;
 
-  // Merge simple, en conservant les objets existants
   const out = Object.assign(base, obj);
   out.lists = Object.assign({}, base.lists, obj.lists || {});
   out.archiveBySeq = Object.assign({}, base.archiveBySeq, obj.archiveBySeq || {});
   if(typeof out.archiveNext !== "number" || !Number.isFinite(out.archiveNext) || out.archiveNext < 1){
-    out.archiveNext = base.archiveNext;
+    out.archiveNext = 1;
+  }
+  if(!out.currentRun || typeof out.currentRun !== "object"){
+    out.currentRun = null;
   }
   return out;
 }
 function loadLocal(){
   try{
-    const o = JSON.parse(localStorage.getItem(STORE_LOCAL)||"null");
-    return mergeDefaults(o);
+    return mergeDefaults(JSON.parse(localStorage.getItem(STORE_LOCAL)||"null"));
   }catch{
     return defaultState();
   }
@@ -105,7 +104,14 @@ function nextInterval(cur){
 function ensureListState(st, seqIndex){
   const k=String(seqIndex);
   if(!st.lists[k]){
-    st.lists[k] = { due: todayStr(), interval: 1, seen:false, validated:false, lastResult:"", lastSeen:"" };
+    st.lists[k] = {
+      due: todayStr(),
+      interval: 1,
+      seen: false,
+      validated: false,
+      lastResult: "",
+      lastSeen: ""
+    };
   }
   return st.lists[k];
 }
@@ -208,7 +214,7 @@ function codeChallengeFromVerifier(verifier){
 }
 
 /* ===========================
-   PKCE STORE (window.name + localStorage)
+   PKCE STORE
 =========================== */
 function pkceSave(payload){
   try{ window.name = "SEQODS_PKCE::" + JSON.stringify(payload); }catch{}
@@ -334,7 +340,7 @@ async function refreshAccessTokenIfNeeded(){
 }
 
 /* ===========================
-   DROPBOX FILES API (JSON + TEXT + DOSSIERS)
+   DROPBOX FILES API
 =========================== */
 async function dbxDownloadJson(path){
   const t = await refreshAccessTokenIfNeeded();
@@ -409,7 +415,7 @@ async function dbxCreateFolder(path){
   });
 
   if(r.ok) return { ok:true };
-  if(r.status === 409) return { ok:true }; // déjà existant
+  if(r.status === 409) return { ok:true };
   return { ok:false, err:"create_folder_failed" };
 }
 
@@ -424,7 +430,7 @@ async function dbxUploadText(path, text){
       "Content-Type":"application/octet-stream",
       "Dropbox-API-Arg": JSON.stringify({
         path,
-        mode: { ".tag":"add" },     // n’écrase pas
+        mode: { ".tag":"add" },
         autorename: false,
         mute: true,
         strict_conflict: true
@@ -434,7 +440,7 @@ async function dbxUploadText(path, text){
   });
 
   if(r.ok) return { ok:true };
-  if(r.status === 409) return { ok:true }; // fichier déjà créé
+  if(r.status === 409) return { ok:true };
   return { ok:false, err:"upload_text_failed" };
 }
 
@@ -442,13 +448,10 @@ async function dbxUploadText(path, text){
    DATA (data.js)
 =========================== */
 const DATA = window.SEQODS_DATA;
-if(!DATA){
-  console.error("SEQODS_DATA absent. Vérifie data.js.");
-}
 const C = DATA?.c || [];
 const E = DATA?.e || [];
 const F = DATA?.f || [];
-const A = DATA?.a || {}; // anagrammes : tirage -> liste
+const A = DATA?.a || {};
 
 const sequences = [];
 for(let start=0; start+11<C.length; start+=12){
@@ -464,13 +467,13 @@ let currentSeqIndex = -1;
 let seq = null;
 let targets = [];
 let found = new Set();
-let hintMode = Array(10).fill("none");
+let hintMode = Array(10).fill("none"); // only "tirage" or "none"
 let noHelpRun = true;
 
 /* ===========================
    DEFINITIONS / ANAGRAMMES
 =========================== */
-function openDef(defText, titleWord, canonForAnagrams){
+function openDef(defText, titleWord, canonForAnagrams, showAnagrams){
   const tEl=$("#defTitle"), bEl=$("#defBody"), mEl=$("#defModal");
   if(!tEl || !bEl || !mEl) return;
 
@@ -479,18 +482,23 @@ function openDef(defText, titleWord, canonForAnagrams){
 
   const anaWrap=$("#anaWrap"), ana=$("#defAna");
   if(anaWrap && ana){
-    const base=normalizeWord(canonForAnagrams || titleWord || "");
-    const tir = base ? base.split("").sort((a,b)=>a.localeCompare(b,"fr")).join("") : "";
-    const lst = (tir && A[tir]) ? A[tir].slice() : [];
-    const filtered = base ? lst.filter(x=>normalizeWord(x)!==base) : lst;
-
-    if(!tir || filtered.length===0){
+    if(!showAnagrams){
       anaWrap.style.display="none";
       ana.textContent="";
     }else{
-      anaWrap.style.display="block";
-      const shown = filtered.slice(0,60);
-      ana.textContent = shown.join(" • ") + (filtered.length>60 ? ` … (+${filtered.length-60})` : "");
+      const base=normalizeWord(canonForAnagrams || titleWord || "");
+      const tir = base ? base.split("").sort((a,b)=>a.localeCompare(b,"fr")).join("") : "";
+      const lst = (tir && A[tir]) ? A[tir].slice() : [];
+      const filtered = base ? lst.filter(x=>normalizeWord(x)!==base) : lst;
+
+      if(!tir || filtered.length===0){
+        anaWrap.style.display="none";
+        ana.textContent="";
+      }else{
+        anaWrap.style.display="block";
+        const shown = filtered.slice(0,60);
+        ana.textContent = shown.join(" • ") + (filtered.length>60 ? ` … (+${filtered.length-60})` : "");
+      }
     }
   }
 
@@ -521,32 +529,11 @@ function computeStats(){
 }
 
 /* ===========================
-   ARCHIVAGE DROBOX (cartes vues)
+   ARCHIVAGE DROPBOX
 =========================== */
-async function archiveCardIfFirstSeen(seqIndex){
-  const key = String(seqIndex);
-  if(!state.archiveBySeq) state.archiveBySeq = {};
-  if(state.archiveBySeq[key]) return; // déjà archivée
-
-  // Assure dossier
-  await dbxCreateFolder(DROPBOX_ARCHIVE_DIR);
-
-  // Alloue un numéro
-  if(!state.archiveNext || !Number.isFinite(state.archiveNext) || state.archiveNext < 1){
-    state.archiveNext = 1;
-  }
-  const num = state.archiveNext;
-  state.archiveNext = num + 1;
-  state.archiveBySeq[key] = num;
-  state.updatedAt = Date.now();
-  saveLocal(state);
-
-  // Persiste immédiatement l’état (pour que l’index reste cohérent entre appareils)
-  persistState().catch(()=>{});
-
-  // Construit le texte
+function buildArchiveText(seqIndex, num){
   const s = sequences[seqIndex];
-  if(!s) return;
+  if(!s) return "";
 
   const borneA = E[s.startIdx] || "";
   const borneB = E[s.endIdx] || "";
@@ -561,55 +548,86 @@ async function archiveCardIfFirstSeen(seqIndex){
   lines.push("");
   lines.push("Solutions :");
   for(let i=s.startIdx+1, k=1; i<=s.startIdx+10; i++, k++){
-    const sol = E[i] || "";
-    lines.push(`${k}. ${sol}`);
+    lines.push(`${k}. ${E[i] || ""}`);
   }
   lines.push("");
   lines.push("—");
+  return lines.join("\n");
+}
 
-  const text = lines.join("\n");
-  const filePath = `${DROPBOX_ARCHIVE_DIR}/${pad4(num)}.txt`;
-  await dbxUploadText(filePath, text);
+async function ensureArchiveForSeq(seqIndex){
+  const key = String(seqIndex);
+  if(!state.archiveBySeq) state.archiveBySeq = {};
+
+  let entry = state.archiveBySeq[key];
+  if(!entry){
+    entry = { num: state.archiveNext || 1, uploaded: false };
+    state.archiveNext = (entry.num || 1) + 1;
+    state.archiveBySeq[key] = entry;
+    state.updatedAt = Date.now();
+    saveLocal(state);
+  }
+
+  if(entry.uploaded) return true;
+
+  const folder = await dbxCreateFolder(DROPBOX_ARCHIVE_DIR);
+  if(!folder.ok) return false;
+
+  const text = buildArchiveText(seqIndex, entry.num);
+  const filePath = `${DROPBOX_ARCHIVE_DIR}/${pad4(entry.num)}.txt`;
+  const up = await dbxUploadText(filePath, text);
+
+  if(up.ok){
+    entry.uploaded = true;
+    state.archiveBySeq[key] = entry;
+    state.updatedAt = Date.now();
+    saveLocal(state);
+    return true;
+  }
+  return false;
+}
+
+async function syncPendingArchives(){
+  const t = await refreshAccessTokenIfNeeded();
+  if(!t) return;
+
+  for(let i=0;i<TOTAL;i++){
+    const ls = ensureListState(state, i);
+    if(ls.seen){
+      await ensureArchiveForSeq(i);
+    }
+  }
 }
 
 /* ===========================
-   SRS PICK
+   CURRENT RUN SAVE/RESTORE
 =========================== */
-function eligibleDueSeqIndexes(){
-  const today=todayStr();
-  const due=[];
-  let soonest=null;
-
-  for(let i=0;i<TOTAL;i++){
-    const st = ensureListState(state, i);
-    if(st.validated) continue;
-
-    const d = st.due || today;
-    if(cmpDate(d, today) <= 0) due.push(i);
-    else if(!soonest || cmpDate(d, soonest.date) < 0) soonest = { index:i, date:d };
-  }
-  return { due, soonest };
+function saveCurrentRun(){
+  if(currentSeqIndex < 0) return;
+  state.currentRun = {
+    seqIndex: currentSeqIndex,
+    found: Array.from(found.values()),
+    hintMode: Array.isArray(hintMode) ? hintMode.slice() : Array(10).fill("none"),
+    noHelpRun: !!noHelpRun
+  };
+  state.updatedAt = Date.now();
+  saveLocal(state);
 }
 
-function pickSequence(){
-  const { due, soonest } = eligibleDueSeqIndexes();
+function clearCurrentRun(){
+  state.currentRun = null;
+  state.updatedAt = Date.now();
+  saveLocal(state);
+}
 
-  if(due.length>0){
-    currentSeqIndex = due[Math.floor(Math.random()*due.length)];
-  }else if(soonest){
-    currentSeqIndex = soonest.index;
-    setMessage(`Aucune liste due aujourd’hui. Prochaine échéance : ${soonest.date}.`, "warn");
-  }else{
-    setMessage("Jeu terminé : toutes les listes sont validées.", "ok");
-    return false;
-  }
+function buildTargetsForSeq(seqIndex){
+  const s = sequences[seqIndex];
+  if(!s) return null;
 
-  seq = sequences[currentSeqIndex];
-
-  targets=[];
-  for(let i=seq.startIdx+1;i<=seq.startIdx+10;i++){
+  const arr = [];
+  for(let i=s.startIdx+1;i<=s.startIdx+10;i++){
     const c=C[i];
-    targets.push({
+    arr.push({
       c,
       e:E[i],
       f:F[i] || "",
@@ -617,24 +635,91 @@ function pickSequence(){
       t: tirageFromC(c)
     });
   }
+  return arr;
+}
 
-  found=new Set();
-  hintMode=Array(10).fill("none");
-  noHelpRun=true;
+function restoreCurrentRunIfAny(){
+  const cr = state.currentRun;
+  if(!cr || typeof cr.seqIndex !== "number") return false;
+  if(cr.seqIndex < 0 || cr.seqIndex >= TOTAL) return false;
 
-  const st = ensureListState(state, currentSeqIndex);
-  const firstTimeSeen = !st.seen;
-
-  st.seen = true;
-  st.lastSeen = todayStr();
-  state.updatedAt = Date.now();
-
-  // Archive une fois, au moment de la première vue
-  if(firstTimeSeen){
-    archiveCardIfFirstSeen(currentSeqIndex).catch(()=>{});
-  }
+  currentSeqIndex = cr.seqIndex;
+  seq = sequences[currentSeqIndex];
+  targets = buildTargetsForSeq(currentSeqIndex) || [];
+  found = new Set(Array.isArray(cr.found) ? cr.found : []);
+  hintMode = Array.isArray(cr.hintMode) ? cr.hintMode.slice(0,10) : Array(10).fill("none");
+  while(hintMode.length < 10) hintMode.push("none");
+  noHelpRun = !!cr.noHelpRun;
 
   return true;
+}
+
+/* ===========================
+   PICK / REVIEW POLICY
+=========================== */
+function getDueReviewIndexes(){
+  const today = todayStr();
+  const out = [];
+  for(let i=0;i<TOTAL;i++){
+    const ls = ensureListState(state, i);
+    if(ls.seen && cmpDate(ls.due || today, today) <= 0){
+      out.push(i);
+    }
+  }
+  return out;
+}
+
+function getNewIndexes(){
+  const out = [];
+  for(let i=0;i<TOTAL;i++){
+    const ls = ensureListState(state, i);
+    if(!ls.seen){
+      out.push(i);
+    }
+  }
+  return out;
+}
+
+function pickSpecificSequence(seqIndex){
+  currentSeqIndex = seqIndex;
+  seq = sequences[currentSeqIndex];
+  targets = buildTargetsForSeq(currentSeqIndex) || [];
+  found = new Set();
+  hintMode = Array(10).fill("none");
+  noHelpRun = true;
+  saveCurrentRun();
+  return true;
+}
+
+function pickAccordingPolicy(forcePlainNew=false){
+  const today = todayStr();
+  const dueReviews = getDueReviewIndexes();
+  const newOnes = getNewIndexes();
+
+  let pool = [];
+
+  if(!forcePlainNew && dueReviews.length && state.revisionSnoozeDate !== today){
+    const replay = window.confirm("Des listes sont à réviser. Voulez-vous les rejouer ?");
+    if(replay){
+      pool = dueReviews;
+    }else{
+      state.revisionSnoozeDate = today;
+      state.updatedAt = Date.now();
+      saveLocal(state);
+      persistState().catch(()=>{});
+      pool = newOnes.length ? newOnes : dueReviews;
+    }
+  }else{
+    pool = newOnes.length ? newOnes : dueReviews;
+  }
+
+  if(!pool.length){
+    setMessage("Aucune liste disponible.", "warn");
+    return false;
+  }
+
+  const seqIndex = pool[Math.floor(Math.random()*pool.length)];
+  return pickSpecificSequence(seqIndex);
 }
 
 /* ===========================
@@ -642,7 +727,7 @@ function pickSequence(){
 =========================== */
 function renderBounds(){
   const a=$("#borneA"), b=$("#borneB");
-  if(!a || !b) return;
+  if(!a || !b || !seq) return;
 
   const aE=E[seq.startIdx] || "";
   const bE=E[seq.endIdx] || "";
@@ -652,8 +737,8 @@ function renderBounds(){
   a.textContent = aE;
   b.textContent = bE;
 
-  a.onclick = ()=>openDef(aF, aE, C[seq.startIdx]);
-  b.onclick = ()=>openDef(bF, bE, C[seq.endIdx]);
+  a.onclick = ()=>openDef(aF, aE, C[seq.startIdx], true);
+  b.onclick = ()=>openDef(bF, bE, C[seq.endIdx], true);
 }
 
 function renderSlots(){
@@ -662,24 +747,32 @@ function renderSlots(){
 
   list.innerHTML="";
   for(let i=0;i<10;i++){
+    const t = targets[i];
+    const red = (t && t.len >= 10 && t.len <= 15);
+    const borderStyle = red ? ' style="border-color:#c62828; box-shadow:0 0 0 1px rgba(198,40,40,.25), var(--shadow2);"' : "";
+
     const li=document.createElement("li");
     li.className="slot";
     li.dataset.slot=String(i);
     li.innerHTML=`
-      <div class="slotMain">
+      <div class="slotMain"${borderStyle}>
         <button type="button" class="slotWordBtn">
           <span class="slotText"></span>
           <span class="slotHint"></span>
         </button>
       </div>
       <div class="slotTools">
-        <button class="toolBtn" data-tool="len" title="Longueur">123</button>
         <button class="toolBtn" data-tool="tirage" title="Tirage">ABC</button>
         <button class="toolBtn" data-tool="def" title="Définition">📖</button>
       </div>`;
     list.appendChild(li);
+
+    if(found.has(i)){
+      revealSlot(i);
+    }else{
+      applyHint(i);
+    }
   }
-  applyHintsAll();
 }
 
 function applyHint(i){
@@ -697,10 +790,7 @@ function applyHint(i){
 
   li.querySelectorAll(".toolBtn").forEach(b=>b.disabled=false);
 
-  if(hintMode[i]==="len"){
-    hint.textContent = String(targets[i].len);
-    hint.style.display="flex";
-  }else if(hintMode[i]==="tirage"){
+  if(hintMode[i]==="tirage"){
     hint.textContent = targets[i].t;
     hint.style.display="flex";
   }else{
@@ -715,7 +805,7 @@ function revealSlot(i){
 
   const btn=li.querySelector(".slotWordBtn");
   const txt=li.querySelector(".slotText");
-  if(txt) txt.textContent = targets[i].e; // affichage colonne E
+  if(txt) txt.textContent = targets[i].e;
 
   if(btn){
     btn.dataset.def = targets[i].f || "";
@@ -727,33 +817,42 @@ function revealSlot(i){
   applyHint(i);
 }
 
-function markAidUsed(){ noHelpRun=false; }
+function markAidUsed(){
+  noHelpRun = false;
+  saveCurrentRun();
+}
+
+function finalizeList(wasSolvedWithHelp){
+  const ls = ensureListState(state, currentSeqIndex);
+  ls.seen = true;
+  ls.lastSeen = todayStr();
+
+  if(wasSolvedWithHelp){
+    ls.validated = false;
+    ls.lastResult = "help";
+    ls.interval = 3;
+    ls.due = addDays(todayStr(), 3);
+    setMessage("Liste terminée, mais avec aide.", "warn");
+  }else{
+    ls.validated = true;
+    ls.lastResult = "ok";
+    ls.interval = nextInterval(ls.interval || 1);
+    ls.due = addDays(todayStr(), ls.interval);
+    setMessage("Validée sans aide.", "ok");
+  }
+
+  state.updatedAt = Date.now();
+  clearCurrentRun();
+  computeStats();
+  persistState().catch(()=>{});
+}
 
 function updateCounter(){
   const c=$("#compteur");
   if(c) c.textContent = `${found.size}/10`;
 
   if(found.size !== 10) return;
-
-  const ls = ensureListState(state, currentSeqIndex);
-
-  if(noHelpRun){
-    ls.validated = true;
-    ls.lastResult = "ok";
-    ls.interval = nextInterval(ls.interval || 1);
-    ls.due = addDays(todayStr(), ls.interval);
-    setMessage("Validée sans aide.", "ok");
-  }else{
-    ls.validated = false;
-    ls.lastResult = "help";
-    ls.interval = 1;
-    ls.due = addDays(todayStr(), 1);
-    setMessage("Liste terminée, mais avec aide.", "warn");
-  }
-
-  state.updatedAt = Date.now();
-  computeStats();
-  persistState().catch(()=>{});
+  finalizeList(!noHelpRun);
 }
 
 function validateWord(raw){
@@ -782,6 +881,7 @@ function validateWord(raw){
   if(newly===0) setMessage("Ce mot est déjà validé.", "warn");
   else setMessage(matched.length>1 ? "Validé (doublon)." : "Validé.", "ok");
 
+  saveCurrentRun();
   updateCounter();
 }
 
@@ -793,6 +893,7 @@ function showSolutions(){
       revealSlot(i);
     }
   }
+  saveCurrentRun();
   updateCounter();
   setMessage("Solutions affichées.", "warn");
 }
@@ -810,6 +911,9 @@ async function persistState(){
     return;
   }
   if(btn) btn.textContent = "Dropbox OK";
+
+  // Archive les listes vues avant d’écrire state.json
+  await syncPendingArchives();
 
   const res = await dbxUploadJson(DROPBOX_STATE_PATH, state, state.dbxRev);
 
@@ -843,7 +947,6 @@ async function persistState(){
 }
 
 async function loadStatePreferDropbox(){
-  // local d’abord
   state = loadLocal();
   computeStats();
 
@@ -877,7 +980,7 @@ async function loadStatePreferDropbox(){
 function wire(){
   const btnN=$("#btnNouveau");
   if(btnN) btnN.addEventListener("click", ()=>{
-    if(pickSequence()) renderAll();
+    if(pickAccordingPolicy(false)) renderAll();
   });
 
   const btnV=$("#btnValider");
@@ -922,16 +1025,19 @@ function wire(){
       const which=tool.dataset.tool;
       if(which==="def"){
         markAidUsed();
-        openDef(targets[i].f || "", "", targets[i].c);
+        // pas d’anagrammes via le bouton dictionnaire
+        openDef(targets[i].f || "", "", targets[i].c, false);
         return;
       }
 
-      markAidUsed();
-      if(found.has(i)) return;
-
-      hintMode[i] = (hintMode[i]===which) ? "none" : which;
-      applyHint(i);
-      return;
+      if(which==="tirage"){
+        markAidUsed();
+        if(found.has(i)) return;
+        hintMode[i] = (hintMode[i]==="tirage") ? "none" : "tirage";
+        applyHint(i);
+        saveCurrentRun();
+        return;
+      }
     }
 
     const w = e.target.closest(".slotWordBtn");
@@ -940,7 +1046,7 @@ function wire(){
       const i=Number(li?.dataset?.slot ?? -1);
       if(i<0 || i>9) return;
       if(!found.has(i)) return;
-      openDef(w.dataset.def||"", w.dataset.word||"", w.dataset.canon||"");
+      openDef(w.dataset.def||"", w.dataset.word||"", w.dataset.canon||"", true);
     }
   });
 
@@ -957,11 +1063,10 @@ function renderAll(){
   renderBounds();
   renderSlots();
   const c=$("#compteur");
-  if(c) c.textContent="0/10";
-  setMessage("");
+  if(c) c.textContent = `${found.size}/10`;
   computeStats();
   const inp=$("#saisie");
-  if(inp) inp.value="";
+  if(inp && !found.size) inp.value="";
 }
 
 /* ===========================
@@ -970,14 +1075,14 @@ function renderAll(){
 async function start(){
   wire();
 
-  // OAuth retour
   await oauthHandleRedirectIfNeeded();
-
-  // State
   await loadStatePreferDropbox();
 
-  // Séquence
-  if(pickSequence()) renderAll();
+  if(restoreCurrentRunIfAny()){
+    renderAll();
+  }else{
+    if(pickAccordingPolicy(true)) renderAll();
+  }
 
   // autosync
   setInterval(()=>{ persistState().catch(()=>{}); }, 60_000);
