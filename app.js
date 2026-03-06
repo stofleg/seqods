@@ -9,9 +9,9 @@ const DROPBOX_APP_KEY = "5r5cxyemzt778me";
 const DROPBOX_STATE_PATH = "/state.json";
 const DROPBOX_ARCHIVE_DIR = "/cartes_vues";
 
-const LS_TOKENS = "SEQODS_DBX_TOKENS_V6";
-const LS_PKCE   = "SEQODS_DBX_PKCE_V5";
-const STORE_LOCAL = "SEQODS_LOCAL_STATE_V6";
+const LS_TOKENS = "SEQODS_DBX_TOKENS_V7";
+const LS_PKCE   = "SEQODS_DBX_PKCE_V6";
+const STORE_LOCAL = "SEQODS_LOCAL_STATE_V7";
 
 /* ===========================
    UTIL
@@ -57,13 +57,10 @@ function defaultState(){
     updatedAt: Date.now(),
     dbxRev: null,
     lists: {},
-
     archiveNext: 1,
-    archiveBySeq: {},   // seqIndex -> { num, uploaded }
-
+    archiveBySeq: {},
     revisionSnoozeDate: "",
-
-    currentRun: null    // { seqIndex, found:[...], hintMode:[...], noHelpRun }
+    currentRun: null
   };
 }
 function mergeDefaults(obj){
@@ -122,11 +119,11 @@ function ensureListState(st, seqIndex){
 function saveTokens(t){ try{ localStorage.setItem(LS_TOKENS, JSON.stringify(t)); }catch{} }
 function loadTokens(){ try{ return JSON.parse(localStorage.getItem(LS_TOKENS)||"null"); }catch{ return null; } }
 function hasValidAccessToken(t){
-  return t && t.access_token && t.expires_at && Date.now() < (t.expires_at - 30_000);
+  return t && t.access_token && t.expires_at && Date.now() < (t.expires_at - 30000);
 }
 
 /* ===========================
-   PKCE (SYNC)
+   PKCE
 =========================== */
 function base64urlFromBytes(bytes){
   let str = "";
@@ -234,7 +231,7 @@ function pkceClear(){
 }
 
 /* ===========================
-   OAUTH DROPBOX (PKCE)
+   OAUTH
 =========================== */
 function oauthStart(){
   const redirectUri = currentRedirectUri();
@@ -292,7 +289,7 @@ async function oauthHandleRedirectIfNeeded(){
   }
 
   const tok = await r.json();
-  const expiresAt = Date.now() + (tok.expires_in ? tok.expires_in*1000 : 3_600_000);
+  const expiresAt = Date.now() + (tok.expires_in ? tok.expires_in*1000 : 3600000);
 
   saveTokens({
     access_token: tok.access_token,
@@ -328,7 +325,7 @@ async function refreshAccessTokenIfNeeded(){
   if(!r.ok) return null;
 
   const tok = await r.json();
-  const expiresAt = Date.now() + (tok.expires_in ? tok.expires_in*1000 : 3_600_000);
+  const expiresAt = Date.now() + (tok.expires_in ? tok.expires_in*1000 : 3600000);
 
   const merged = {
     access_token: tok.access_token,
@@ -445,7 +442,7 @@ async function dbxUploadText(path, text){
 }
 
 /* ===========================
-   DATA (data.js)
+   DATA
 =========================== */
 const DATA = window.SEQODS_DATA;
 const C = DATA?.c || [];
@@ -467,7 +464,7 @@ let currentSeqIndex = -1;
 let seq = null;
 let targets = [];
 let found = new Set();
-let hintMode = Array(10).fill("none"); // only "tirage" or "none"
+let hintMode = Array(10).fill("none");
 let noHelpRun = true;
 
 /* ===========================
@@ -486,608 +483,4 @@ function openDef(defText, titleWord, canonForAnagrams, showAnagrams){
       anaWrap.style.display="none";
       ana.textContent="";
     }else{
-      const base=normalizeWord(canonForAnagrams || titleWord || "");
-      const tir = base ? base.split("").sort((a,b)=>a.localeCompare(b,"fr")).join("") : "";
-      const lst = (tir && A[tir]) ? A[tir].slice() : [];
-      const filtered = base ? lst.filter(x=>normalizeWord(x)!==base) : lst;
-
-      if(!tir || filtered.length===0){
-        anaWrap.style.display="none";
-        ana.textContent="";
-      }else{
-        anaWrap.style.display="block";
-        const shown = filtered.slice(0,60);
-        ana.textContent = shown.join(" • ") + (filtered.length>60 ? ` … (+${filtered.length-60})` : "");
-      }
-    }
-  }
-
-  mEl.classList.add("open");
-}
-function closeDef(){
-  const mEl=$("#defModal");
-  if(mEl) mEl.classList.remove("open");
-}
-
-/* ===========================
-   PROGRESSION UI
-=========================== */
-function computeStats(){
-  const seenBar=$("#seenBar"), valBar=$("#valBar"), seenCount=$("#seenCount"), valCount=$("#valCount");
-  if(!seenBar || !valBar || !seenCount || !valCount) return;
-
-  let seen=0, validated=0;
-  for(const k in state.lists){
-    if(state.lists[k]?.seen) seen++;
-    if(state.lists[k]?.validated) validated++;
-  }
-
-  seenCount.textContent = `${seen}/${TOTAL}`;
-  valCount.textContent  = `${validated}/${TOTAL}`;
-  seenBar.style.width = `${Math.round((seen/TOTAL)*100)}%`;
-  valBar.style.width  = `${Math.round((validated/TOTAL)*100)}%`;
-}
-
-/* ===========================
-   ARCHIVAGE DROPBOX
-=========================== */
-function buildArchiveText(seqIndex, num){
-  const s = sequences[seqIndex];
-  if(!s) return "";
-
-  const borneA = E[s.startIdx] || "";
-  const borneB = E[s.endIdx] || "";
-  const date = todayStr();
-
-  const lines = [];
-  lines.push(`Fiche ${pad4(num)}`);
-  lines.push(`Date : ${date}`);
-  lines.push("");
-  lines.push(`Borne A : ${borneA}`);
-  lines.push(`Borne B : ${borneB}`);
-  lines.push("");
-  lines.push("Solutions :");
-  for(let i=s.startIdx+1, k=1; i<=s.startIdx+10; i++, k++){
-    lines.push(`${k}. ${E[i] || ""}`);
-  }
-  lines.push("");
-  lines.push("—");
-  return lines.join("\n");
-}
-
-async function ensureArchiveForSeq(seqIndex){
-  const key = String(seqIndex);
-  if(!state.archiveBySeq) state.archiveBySeq = {};
-
-  let entry = state.archiveBySeq[key];
-  if(!entry){
-    entry = { num: state.archiveNext || 1, uploaded: false };
-    state.archiveNext = (entry.num || 1) + 1;
-    state.archiveBySeq[key] = entry;
-    state.updatedAt = Date.now();
-    saveLocal(state);
-  }
-
-  if(entry.uploaded) return true;
-
-  const folder = await dbxCreateFolder(DROPBOX_ARCHIVE_DIR);
-  if(!folder.ok) return false;
-
-  const text = buildArchiveText(seqIndex, entry.num);
-  const filePath = `${DROPBOX_ARCHIVE_DIR}/${pad4(entry.num)}.txt`;
-  const up = await dbxUploadText(filePath, text);
-
-  if(up.ok){
-    entry.uploaded = true;
-    state.archiveBySeq[key] = entry;
-    state.updatedAt = Date.now();
-    saveLocal(state);
-    return true;
-  }
-  return false;
-}
-
-async function syncPendingArchives(){
-  const t = await refreshAccessTokenIfNeeded();
-  if(!t) return;
-
-  for(let i=0;i<TOTAL;i++){
-    const ls = ensureListState(state, i);
-    if(ls.seen){
-      await ensureArchiveForSeq(i);
-    }
-  }
-}
-
-/* ===========================
-   CURRENT RUN SAVE/RESTORE
-=========================== */
-function saveCurrentRun(){
-  if(currentSeqIndex < 0) return;
-  state.currentRun = {
-    seqIndex: currentSeqIndex,
-    found: Array.from(found.values()),
-    hintMode: Array.isArray(hintMode) ? hintMode.slice() : Array(10).fill("none"),
-    noHelpRun: !!noHelpRun
-  };
-  state.updatedAt = Date.now();
-  saveLocal(state);
-}
-
-function clearCurrentRun(){
-  state.currentRun = null;
-  state.updatedAt = Date.now();
-  saveLocal(state);
-}
-
-function buildTargetsForSeq(seqIndex){
-  const s = sequences[seqIndex];
-  if(!s) return null;
-
-  const arr = [];
-  for(let i=s.startIdx+1;i<=s.startIdx+10;i++){
-    const c=C[i];
-    arr.push({
-      c,
-      e:E[i],
-      f:F[i] || "",
-      len: normalizeWord(c).length,
-      t: tirageFromC(c)
-    });
-  }
-  return arr;
-}
-
-function restoreCurrentRunIfAny(){
-  const cr = state.currentRun;
-  if(!cr || typeof cr.seqIndex !== "number") return false;
-  if(cr.seqIndex < 0 || cr.seqIndex >= TOTAL) return false;
-
-  currentSeqIndex = cr.seqIndex;
-  seq = sequences[currentSeqIndex];
-  targets = buildTargetsForSeq(currentSeqIndex) || [];
-  found = new Set(Array.isArray(cr.found) ? cr.found : []);
-  hintMode = Array.isArray(cr.hintMode) ? cr.hintMode.slice(0,10) : Array(10).fill("none");
-  while(hintMode.length < 10) hintMode.push("none");
-  noHelpRun = !!cr.noHelpRun;
-
-  return true;
-}
-
-/* ===========================
-   PICK / REVIEW POLICY
-=========================== */
-function getDueReviewIndexes(){
-  const today = todayStr();
-  const out = [];
-  for(let i=0;i<TOTAL;i++){
-    const ls = ensureListState(state, i);
-    if(ls.seen && cmpDate(ls.due || today, today) <= 0){
-      out.push(i);
-    }
-  }
-  return out;
-}
-
-function getNewIndexes(){
-  const out = [];
-  for(let i=0;i<TOTAL;i++){
-    const ls = ensureListState(state, i);
-    if(!ls.seen){
-      out.push(i);
-    }
-  }
-  return out;
-}
-
-function pickSpecificSequence(seqIndex){
-  currentSeqIndex = seqIndex;
-  seq = sequences[currentSeqIndex];
-  targets = buildTargetsForSeq(currentSeqIndex) || [];
-  found = new Set();
-  hintMode = Array(10).fill("none");
-  noHelpRun = true;
-  saveCurrentRun();
-  return true;
-}
-
-function pickAccordingPolicy(forcePlainNew=false){
-  const today = todayStr();
-  const dueReviews = getDueReviewIndexes();
-  const newOnes = getNewIndexes();
-
-  let pool = [];
-
-  if(!forcePlainNew && dueReviews.length && state.revisionSnoozeDate !== today){
-    const replay = window.confirm("Des listes sont à réviser. Voulez-vous les rejouer ?");
-    if(replay){
-      pool = dueReviews;
-    }else{
-      state.revisionSnoozeDate = today;
-      state.updatedAt = Date.now();
-      saveLocal(state);
-      persistState().catch(()=>{});
-      pool = newOnes.length ? newOnes : dueReviews;
-    }
-  }else{
-    pool = newOnes.length ? newOnes : dueReviews;
-  }
-
-  if(!pool.length){
-    setMessage("Aucune liste disponible.", "warn");
-    return false;
-  }
-
-  const seqIndex = pool[Math.floor(Math.random()*pool.length)];
-  return pickSpecificSequence(seqIndex);
-}
-
-/* ===========================
-   RENDER
-=========================== */
-function renderBounds(){
-  const a=$("#borneA"), b=$("#borneB");
-  if(!a || !b || !seq) return;
-
-  const aE=E[seq.startIdx] || "";
-  const bE=E[seq.endIdx] || "";
-  const aF=F[seq.startIdx] || "";
-  const bF=F[seq.endIdx] || "";
-
-  a.textContent = aE;
-  b.textContent = bE;
-
-  a.onclick = ()=>openDef(aF, aE, C[seq.startIdx], true);
-  b.onclick = ()=>openDef(bF, bE, C[seq.endIdx], true);
-}
-
-function renderSlots(){
-  const list=$("#liste");
-  if(!list) return;
-
-  list.innerHTML="";
-  for(let i=0;i<10;i++){
-    const t = targets[i];
-    const red = (t && t.len >= 10 && t.len <= 15);
-    const borderStyle = red ? ' style="border-color:#c62828; box-shadow:0 0 0 1px rgba(198,40,40,.25), var(--shadow2);"' : "";
-
-    const li=document.createElement("li");
-    li.className="slot";
-    li.dataset.slot=String(i);
-    li.innerHTML=`
-      <div class="slotMain"${borderStyle}>
-        <button type="button" class="slotWordBtn">
-          <span class="slotText"></span>
-          <span class="slotHint"></span>
-        </button>
-      </div>
-      <div class="slotTools">
-        <button class="toolBtn" data-tool="tirage" title="Tirage">ABC</button>
-        <button class="toolBtn" data-tool="def" title="Définition">📖</button>
-      </div>`;
-    list.appendChild(li);
-
-    if(found.has(i)){
-      revealSlot(i);
-    }else{
-      applyHint(i);
-    }
-  }
-}
-
-function applyHint(i){
-  const li=$("#liste")?.querySelector(`li[data-slot="${i}"]`);
-  if(!li) return;
-
-  const hint=li.querySelector(".slotHint");
-  if(!hint) return;
-
-  if(found.has(i)){
-    hint.style.display="none";
-    li.querySelectorAll(".toolBtn").forEach(b=>b.disabled=true);
-    return;
-  }
-
-  li.querySelectorAll(".toolBtn").forEach(b=>b.disabled=false);
-
-  if(hintMode[i]==="tirage"){
-    hint.textContent = targets[i].t;
-    hint.style.display="flex";
-  }else{
-    hint.style.display="none";
-  }
-}
-function applyHintsAll(){ for(let i=0;i<10;i++) applyHint(i); }
-
-function revealSlot(i){
-  const li=$("#liste")?.querySelector(`li[data-slot="${i}"]`);
-  if(!li) return;
-
-  const btn=li.querySelector(".slotWordBtn");
-  const txt=li.querySelector(".slotText");
-  if(txt) txt.textContent = targets[i].e;
-
-  if(btn){
-    btn.dataset.def = targets[i].f || "";
-    btn.dataset.word = targets[i].e || "";
-    btn.dataset.canon = targets[i].c || "";
-  }
-
-  hintMode[i]="none";
-  applyHint(i);
-}
-
-function markAidUsed(){
-  noHelpRun = false;
-  saveCurrentRun();
-}
-
-function finalizeList(wasSolvedWithHelp){
-  const ls = ensureListState(state, currentSeqIndex);
-  ls.seen = true;
-  ls.lastSeen = todayStr();
-
-  if(wasSolvedWithHelp){
-    ls.validated = false;
-    ls.lastResult = "help";
-    ls.interval = 3;
-    ls.due = addDays(todayStr(), 3);
-    setMessage("Liste terminée, mais avec aide.", "warn");
-  }else{
-    ls.validated = true;
-    ls.lastResult = "ok";
-    ls.interval = nextInterval(ls.interval || 1);
-    ls.due = addDays(todayStr(), ls.interval);
-    setMessage("Validée sans aide.", "ok");
-  }
-
-  state.updatedAt = Date.now();
-  clearCurrentRun();
-  computeStats();
-  persistState().catch(()=>{});
-}
-
-function updateCounter(){
-  const c=$("#compteur");
-  if(c) c.textContent = `${found.size}/10`;
-
-  if(found.size !== 10) return;
-  finalizeList(!noHelpRun);
-}
-
-function validateWord(raw){
-  const norm=normalizeWord(raw);
-  if(!norm){ setMessage("Saisie vide.", "warn"); return; }
-
-  const matched=[];
-  for(let i=0;i<targets.length;i++){
-    if(normalizeWord(targets[i].c)===norm) matched.push(i);
-  }
-
-  if(matched.length===0){
-    setMessage("Ce mot ne fait pas partie des 10 entrées à trouver.", "warn");
-    return;
-  }
-
-  let newly=0;
-  for(const i of matched){
-    if(!found.has(i)){
-      found.add(i);
-      revealSlot(i);
-      newly++;
-    }
-  }
-
-  if(newly===0) setMessage("Ce mot est déjà validé.", "warn");
-  else setMessage(matched.length>1 ? "Validé (doublon)." : "Validé.", "ok");
-
-  saveCurrentRun();
-  updateCounter();
-}
-
-function showSolutions(){
-  markAidUsed();
-  for(let i=0;i<10;i++){
-    if(!found.has(i)){
-      found.add(i);
-      revealSlot(i);
-    }
-  }
-  saveCurrentRun();
-  updateCounter();
-  setMessage("Solutions affichées.", "warn");
-}
-
-/* ===========================
-   PERSISTENCE (Local + Dropbox)
-=========================== */
-async function persistState(){
-  saveLocal(state);
-
-  const t = await refreshAccessTokenIfNeeded();
-  const btn=$("#btnDropbox");
-  if(!t){
-    if(btn) btn.textContent = "Connexion Dropbox";
-    return;
-  }
-  if(btn) btn.textContent = "Dropbox OK";
-
-  // Archive les listes vues avant d’écrire state.json
-  await syncPendingArchives();
-
-  const res = await dbxUploadJson(DROPBOX_STATE_PATH, state, state.dbxRev);
-
-  if(res.ok){
-    state.dbxRev = res.rev || state.dbxRev;
-    state.updatedAt = Date.now();
-    saveLocal(state);
-    return;
-  }
-
-  if(res.err==="conflict"){
-    const remote = await dbxDownloadJson(DROPBOX_STATE_PATH);
-    if(remote.ok){
-      const remoteState = mergeDefaults(remote.data);
-      const chooseRemote = (remoteState.updatedAt||0) >= (state.updatedAt||0);
-      state = chooseRemote ? remoteState : state;
-      state.dbxRev = remote.rev || state.dbxRev || null;
-
-      const res2 = await dbxUploadJson(DROPBOX_STATE_PATH, state, state.dbxRev);
-      if(res2.ok){
-        state.dbxRev = res2.rev || state.dbxRev;
-        saveLocal(state);
-        return;
-      }
-    }
-    setMessage("Conflit Dropbox : réessaie.", "warn");
-    return;
-  }
-
-  setMessage("Synchro Dropbox : échec.", "warn");
-}
-
-async function loadStatePreferDropbox(){
-  state = loadLocal();
-  computeStats();
-
-  const t = await refreshAccessTokenIfNeeded();
-  const btn=$("#btnDropbox");
-  if(!t){
-    if(btn) btn.textContent = "Connexion Dropbox";
-    return;
-  }
-  if(btn) btn.textContent = "Dropbox OK";
-
-  const remote = await dbxDownloadJson(DROPBOX_STATE_PATH);
-  if(remote.ok){
-    const remoteState = mergeDefaults(remote.data);
-    const chooseRemote = (remoteState.updatedAt||0) >= (state.updatedAt||0);
-    state = chooseRemote ? remoteState : state;
-    state.dbxRev = remote.rev || state.dbxRev || null;
-    saveLocal(state);
-    computeStats();
-    return;
-  }
-
-  if(remote.err==="not_found"){
-    await persistState();
-  }
-}
-
-/* ===========================
-   WIRE
-=========================== */
-function wire(){
-  const btnN=$("#btnNouveau");
-  if(btnN) btnN.addEventListener("click", ()=>{
-    if(pickAccordingPolicy(false)) renderAll();
-  });
-
-  const btnV=$("#btnValider");
-  if(btnV) btnV.addEventListener("click", ()=>{
-    const inp=$("#saisie");
-    validateWord(inp ? inp.value : "");
-    if(inp){ inp.value=""; inp.focus(); }
-  });
-
-  const inp=$("#saisie");
-  if(inp) inp.addEventListener("keydown",(e)=>{
-    if(e.key==="Enter"){
-      e.preventDefault();
-      const btn=$("#btnValider");
-      if(btn) btn.click();
-    }
-  });
-
-  const btnS=$("#btnSolutions");
-  if(btnS) btnS.addEventListener("click", showSolutions);
-
-  const btnD=$("#btnDropbox");
-  if(btnD) btnD.addEventListener("click", async ()=>{
-    const t = loadTokens();
-    if(t && (t.refresh_token || hasValidAccessToken(t))){
-      setMessage("Synchronisation…", "");
-      await persistState();
-      setMessage("Synchronisation terminée.", "ok");
-      return;
-    }
-    oauthStart();
-  });
-
-  const list=$("#liste");
-  if(list) list.addEventListener("click",(e)=>{
-    const tool = e.target.closest(".toolBtn");
-    if(tool){
-      const li=tool.closest(".slot");
-      const i=Number(li?.dataset?.slot ?? -1);
-      if(i<0 || i>9) return;
-
-      const which=tool.dataset.tool;
-      if(which==="def"){
-        markAidUsed();
-        // pas d’anagrammes via le bouton dictionnaire
-        openDef(targets[i].f || "", "", targets[i].c, false);
-        return;
-      }
-
-      if(which==="tirage"){
-        markAidUsed();
-        if(found.has(i)) return;
-        hintMode[i] = (hintMode[i]==="tirage") ? "none" : "tirage";
-        applyHint(i);
-        saveCurrentRun();
-        return;
-      }
-    }
-
-    const w = e.target.closest(".slotWordBtn");
-    if(w){
-      const li=w.closest(".slot");
-      const i=Number(li?.dataset?.slot ?? -1);
-      if(i<0 || i>9) return;
-      if(!found.has(i)) return;
-      openDef(w.dataset.def||"", w.dataset.word||"", w.dataset.canon||"", true);
-    }
-  });
-
-  const defClose=$("#defClose");
-  if(defClose) defClose.addEventListener("click", closeDef);
-  const defBackdrop=$("#defBackdrop");
-  if(defBackdrop) defBackdrop.addEventListener("click", closeDef);
-  document.addEventListener("keydown",(e)=>{ if(e.key==="Escape") closeDef(); });
-
-  window.addEventListener("beforeunload", ()=>{ saveLocal(state); });
-}
-
-function renderAll(){
-  renderBounds();
-  renderSlots();
-  const c=$("#compteur");
-  if(c) c.textContent = `${found.size}/10`;
-  computeStats();
-  const inp=$("#saisie");
-  if(inp && !found.size) inp.value="";
-}
-
-/* ===========================
-   START
-=========================== */
-async function start(){
-  wire();
-
-  await oauthHandleRedirectIfNeeded();
-  await loadStatePreferDropbox();
-
-  if(restoreCurrentRunIfAny()){
-    renderAll();
-  }else{
-    if(pickAccordingPolicy(true)) renderAll();
-  }
-
-  // autosync
-  setInterval(()=>{ persistState().catch(()=>{}); }, 60_000);
-}
-
-document.addEventListener("DOMContentLoaded", start);
-
-})();
+      const base=normalizeWord(c
