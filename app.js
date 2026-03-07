@@ -51,7 +51,7 @@ function pad4(n){ return String(n).padStart(4, "0"); }
 =========================== */
 function defaultState(){
   return {
-    updatedAt: Date.now(),
+    updatedAt: 0,
     dbxRev: null,
     lists: {},
     archiveNext: 1,
@@ -953,6 +953,21 @@ async function persistState(){
   if(btn) btn.textContent = "Dropbox OK";
 
   await syncPendingArchives();
+
+  // Si on n'a pas de rev locale, on télécharge d'abord pour éviter d'écraser
+  // un state existant sur Dropbox (ex: nouvel appareil / PWA fraîche)
+  if(!state.dbxRev){
+    const remote = await dbxDownloadJson(DROPBOX_STATE_PATH);
+    if(remote.ok){
+      const remoteState = mergeDefaults(remote.data);
+      const chooseRemote = (remoteState.updatedAt||0) >= (state.updatedAt||0);
+      state = chooseRemote ? remoteState : state;
+      state.dbxRev = remote.rev || null;
+      saveLocal(state);
+      computeStats();
+      if(chooseRemote) return; // on a récupéré le bon state, pas besoin d'uploader
+    }
+  }
 
   const res = await dbxUploadJson(DROPBOX_STATE_PATH, state, state.dbxRev);
 
