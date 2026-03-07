@@ -461,8 +461,6 @@ for(let start=0; start+11<C.length; start+=12){
 }
 const TOTAL = sequences.length;
 
-const DICT = new Set(C.map(w => normalizeWord(w)));
-
 function isInDictionary(norm){
   return DICT.has(norm);
 }
@@ -474,6 +472,7 @@ let found = new Set();
 let hintMode = Array(10).fill("none");
 let noHelpRun = true;
 let syncTimer = null;
+let DICT = new Set();
 
 /* ===========================
    HELPERS UI / SYNC
@@ -1147,6 +1146,7 @@ function renderAll(){
    START
 =========================== */
 async function start(){
+  DICT = new Set(C.map(w => normalizeWord(w)));
   wire();
   moveNewButtonForMobile();
 
