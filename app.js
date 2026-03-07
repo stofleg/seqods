@@ -926,9 +926,11 @@ function updateSolutionsBtn(){
   if(!btnS) return;
   if(solutionsShown){
     btnS.textContent="Rejouer";
+    btnS.dataset.mode="rejouer";
     btnS.classList.remove("btnDanger");
   }else{
     btnS.textContent="Solutions";
+    btnS.dataset.mode="solutions";
     btnS.classList.add("btnDanger");
   }
 }
@@ -1027,7 +1029,7 @@ function wire(){
 
   const btnS=$("#btnSolutions");
   if(btnS) btnS.addEventListener("click", ()=>{
-    if(solutionsShown){
+    if(btnS.dataset.mode === "rejouer"){
       if(pickAccordingPolicy(false)) renderAll();
     }else{
       showSolutions();
