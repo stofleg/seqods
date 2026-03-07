@@ -924,7 +924,7 @@ function showSolutions(){
 function updateSolutionsBtn(){
   const btnS=$("#btnSolutions");
   if(!btnS) return;
-  if(solutionsShown || found.size===10){
+  if(solutionsShown){
     btnS.textContent="Rejouer";
     btnS.classList.remove("btnDanger");
   }else{
@@ -933,7 +933,7 @@ function updateSolutionsBtn(){
   }
 }
 
-function switchToRejouer(){ updateSolutionsBtn(); }
+function switchToRejouer(){ solutionsShown=true; updateSolutionsBtn(); }
 function resetSolutionsBtn(){ solutionsShown=false; updateSolutionsBtn(); }
 
 /* ===========================
@@ -1027,7 +1027,7 @@ function wire(){
 
   const btnS=$("#btnSolutions");
   if(btnS) btnS.addEventListener("click", ()=>{
-    if(solutionsShown || found.size===10){
+    if(solutionsShown){
       if(pickAccordingPolicy(false)) renderAll();
     }else{
       showSolutions();
