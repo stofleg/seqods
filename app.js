@@ -461,16 +461,10 @@ for(let start=0; start+11<C.length; start+=12){
 }
 const TOTAL = sequences.length;
 
+const DICT = new Set(C.map(w => normalizeWord(w)));
+
 function isInDictionary(norm){
-  let lo=0, hi=C.length-1;
-  while(lo<=hi){
-    const mid=(lo+hi)>>1;
-    const w=normalizeWord(C[mid]);
-    if(w===norm) return true;
-    if(w<norm) lo=mid+1;
-    else hi=mid-1;
-  }
-  return false;
+  return DICT.has(norm);
 }
 let state = loadLocal();
 let currentSeqIndex = -1;
