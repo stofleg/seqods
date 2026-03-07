@@ -25,6 +25,11 @@
       --redSlotBorder:#c62828;
       --redSlotGlow:rgba(198,40,40,.22);
       --redSlotBg:rgba(198,40,40,.04);
+      --dottedSlotBorder: rgba(16,24,40,.45);
+      --okSlotBg: rgba(26,143,61,.18);
+      --okSlotBorder: rgba(26,143,61,.55);
+      --failSlotBg: rgba(198,40,40,.16);
+      --failSlotBorder: rgba(198,40,40,.55);
     }
 
     @media (prefers-color-scheme: dark){
@@ -48,6 +53,11 @@
         --redSlotBorder:#ff6b6b;
         --redSlotGlow:rgba(255,107,107,.28);
         --redSlotBg:rgba(255,107,107,.06);
+        --dottedSlotBorder: rgba(255,255,255,.50);
+        --okSlotBg: rgba(101,224,138,.14);
+        --okSlotBorder: rgba(101,224,138,.50);
+        --failSlotBg: rgba(255,107,107,.14);
+        --failSlotBorder: rgba(255,107,107,.55);
       }
     }
 
@@ -272,13 +282,23 @@
     }
 
     .slotMain.redFlag{
-      border-color: var(--redSlotBorder);
+      border: 2px dotted var(--dottedSlotBorder);
+      background: var(--slot);
+      box-shadow: var(--shadow2);
+    }
+
+    .slotMain.slotValidated{
       background:
-        linear-gradient(0deg, var(--redSlotBg), var(--redSlotBg)),
+        linear-gradient(0deg, var(--okSlotBg), var(--okSlotBg)),
         var(--slot);
-      box-shadow:
-        0 0 0 2px var(--redSlotGlow),
-        var(--shadow2);
+      border-color: var(--okSlotBorder);
+    }
+
+    .slotMain.slotFailed{
+      background:
+        linear-gradient(0deg, var(--failSlotBg), var(--failSlotBg)),
+        var(--slot);
+      border-color: var(--failSlotBorder);
     }
 
     .slotWordBtn{
@@ -392,6 +412,7 @@
       font-size:16px;
       outline:none;
       box-shadow:var(--shadow2);
+      text-transform: uppercase;
     }
 
     @media (prefers-color-scheme: dark){
@@ -511,13 +532,11 @@
       <div class="topBar">
         <div class="title">
           <h1>SeqOds</h1>
-          <p class="sub">Synchro Dropbox + répétition espacée</p>
         </div>
 
         <div class="rightCol">
           <div class="chipRow">
             <div class="chip">Progression&nbsp;: <strong id="compteur">0/10</strong></div>
-            <button id="btnNouveau" class="btn" type="button">Nouveau</button>
             <button id="btnDropbox" class="btn" type="button">Connexion Dropbox</button>
           </div>
 
@@ -554,7 +573,6 @@
             spellcheck="false"
             placeholder="Saisie"
           />
-          <button id="btnValider" class="btn" type="button">Valider</button>
           <button id="btnSolutions" class="btn btnDanger" type="button">Solutions</button>
         </div>
         <div class="msg" id="msg"></div>
