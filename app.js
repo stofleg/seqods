@@ -904,6 +904,8 @@ function validateWord(raw){
   updateCounter();
 }
 
+let solutionsShown = false;
+
 function showSolutions(){
   markAidUsed();
   for(let i=0;i<10;i++){
@@ -912,30 +914,27 @@ function showSolutions(){
       revealSlot(i, true);
     }
   }
+  solutionsShown = true;
   saveCurrentRun();
   scheduleSync();
   updateCounter();
-  switchToRejouer();
+  updateSolutionsBtn();
 }
 
-function switchToRejouer(){
+function updateSolutionsBtn(){
   const btnS=$("#btnSolutions");
   if(!btnS) return;
-  btnS.textContent="Rejouer";
-  btnS.classList.remove("btnDanger");
-  btnS.onclick=()=>{
-    if(pickAccordingPolicy(false)) renderAll();
-    resetSolutionsBtn();
-  };
+  if(solutionsShown || found.size===10){
+    btnS.textContent="Rejouer";
+    btnS.classList.remove("btnDanger");
+  }else{
+    btnS.textContent="Solutions";
+    btnS.classList.add("btnDanger");
+  }
 }
 
-function resetSolutionsBtn(){
-  const btnS=$("#btnSolutions");
-  if(!btnS) return;
-  btnS.textContent="Solutions";
-  btnS.classList.add("btnDanger");
-  btnS.onclick=showSolutions;
-}
+function switchToRejouer(){ updateSolutionsBtn(); }
+function resetSolutionsBtn(){ solutionsShown=false; updateSolutionsBtn(); }
 
 /* ===========================
    PERSISTENCE
@@ -1027,7 +1026,13 @@ function wire(){
   });
 
   const btnS=$("#btnSolutions");
-  if(btnS) btnS.addEventListener("click", showSolutions);
+  if(btnS) btnS.addEventListener("click", ()=>{
+    if(solutionsShown || found.size===10){
+      if(pickAccordingPolicy(false)) renderAll();
+    }else{
+      showSolutions();
+    }
+  });
 
   const btnD=$("#btnDropbox");
   if(btnD) btnD.addEventListener("click", async ()=>{
