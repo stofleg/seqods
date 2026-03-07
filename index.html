@@ -88,7 +88,6 @@
       box-shadow: var(--shadow);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
-      overflow:hidden;
     }
 
     .topBar{
@@ -97,6 +96,8 @@
       align-items:flex-start;
       justify-content:space-between;
       gap:10px;
+      border-radius: var(--radius) var(--radius) 0 0;
+      overflow: hidden;
     }
 
     .title{
@@ -388,6 +389,7 @@
       padding:10px;
       border-top:1px solid var(--stroke);
       background: rgba(255,255,255,.04);
+      border-radius: 0 0 var(--radius) var(--radius);
     }
 
     @media (prefers-color-scheme: light){
