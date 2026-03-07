@@ -36,7 +36,15 @@ function tirageFromC(c){
   return n.split("").sort((a,b)=>a.localeCompare(b,"fr")).join("");
 }
 function setMessage(t,cls){
-  // messages d'état supprimés
+  const el=$("#msg");
+  if(!el) return;
+  if(cls==="err"){
+    el.textContent = t || "";
+    el.className = "msg err";
+  }else{
+    el.textContent = "";
+    el.className = "msg";
+  }
 }
 function currentRedirectUri(){
   const u = new URL(window.location.href);
@@ -900,8 +908,9 @@ function validateWord(raw){
     }
   }
 
-  if(newly===0) setMessage("Ce mot est déjà validé.", "warn");
-  else setMessage(matched.length>1 ? "Validé (doublon)." : "Validé.", "ok");
+  // mot valide trouvé : effacer le message d'erreur
+  const el=$("#msg");
+  if(el){ el.textContent=""; el.className="msg"; }
 
   saveCurrentRun();
   scheduleSync();
