@@ -1252,31 +1252,22 @@ function wire(){
     oauthStart();
   });
 
-  // Settings
-  const btnSettings = $("#btnSettings");
-  const settingsModal = $("#settingsModal");
-  const settingsClose = $("#settingsClose");
-  const settingsBackdrop = $("#settingsBackdrop");
-
+  // Settings — toutes les references DOM resolues au moment du clic
   function openSettings(){
-    const el = settingsModal;
-    if(!el) return;
-    // Remplir les champs avec les valeurs actuelles
+    const m = $("#settingsModal"); if(!m) return;
     const qN = $("#setQuotaNew"); if(qN) qN.value = settings.quotaNew;
     const qR = $("#setQuotaReview"); if(qR) qR.value = settings.quotaReview;
     const cE = $("#setChronoEnabled"); if(cE) cE.checked = settings.chronoEnabled;
     const cM = $("#setChronoMode"); if(cM) cM.value = settings.chronoMode;
     const cS = $("#setChronoSeconds"); if(cS) cS.value = settings.chronoSeconds;
-    updateChronoSettingsVisibility();
-    el.classList.add("open");
-  }
-  function closeSettings(){ if(settingsModal) settingsModal.classList.remove("open"); }
-  function updateChronoSettingsVisibility(){
-    const cE = $("#setChronoEnabled");
-    const row = $("#chronoDownRow");
-    if(row) row.style.display = (cE && cE.checked && $("#setChronoMode") && $("#setChronoMode").value === "down") ? "flex" : "none";
     const modeRow = $("#chronoModeRow");
+    const downRow = $("#chronoDownRow");
     if(modeRow) modeRow.style.display = (cE && cE.checked) ? "flex" : "none";
+    if(downRow) downRow.style.display = (cE && cE.checked && cM && cM.value==="down") ? "flex" : "none";
+    m.classList.add("open");
+  }
+  function closeSettings(){
+    const m = $("#settingsModal"); if(m) m.classList.remove("open");
   }
   function applySettings(){
     const qN = parseInt($("#setQuotaNew")?.value) || 3;
@@ -1290,14 +1281,23 @@ function wire(){
     updateSessionChip();
     closeSettings();
   }
+  function onChronoSettingsChange(){
+    const cE = $("#setChronoEnabled");
+    const cM = $("#setChronoMode");
+    const modeRow = $("#chronoModeRow");
+    const downRow = $("#chronoDownRow");
+    if(modeRow) modeRow.style.display = (cE && cE.checked) ? "flex" : "none";
+    if(downRow) downRow.style.display = (cE && cE.checked && cM && cM.value==="down") ? "flex" : "none";
+  }
 
-  if(btnSettings) btnSettings.addEventListener("click", openSettings);
-  if(settingsClose) settingsClose.addEventListener("click", applySettings);
-  if(settingsBackdrop) settingsBackdrop.addEventListener("click", applySettings);
-  const setChronoEnabled = $("#setChronoEnabled");
-  if(setChronoEnabled) setChronoEnabled.addEventListener("change", updateChronoSettingsVisibility);
-  const setChronoMode = $("#setChronoMode");
-  if(setChronoMode) setChronoMode.addEventListener("change", updateChronoSettingsVisibility);
+  document.addEventListener("click", (e)=>{
+    if(e.target.closest("#btnSettings"))      { openSettings(); return; }
+    if(e.target.closest("#settingsClose"))    { applySettings(); return; }
+    if(e.target.closest("#settingsBackdrop")) { applySettings(); return; }
+  });
+  document.addEventListener("change", (e)=>{
+    if(e.target.id==="setChronoEnabled" || e.target.id==="setChronoMode") onChronoSettingsChange();
+  });
 
   const list=$("#liste");
   if(list) list.addEventListener("click",(e)=>{
@@ -1383,56 +1383,5 @@ async function start(){
   setInterval(()=>{ persistState().catch(()=>{}); }, 60000);
 }
 
-document.addEventListener("DOMContentLoaded", ()=>{
-  // Wiring direct du bouton settings en secours
-  const _btn = document.querySelector("#btnSettings");
-  if(_btn){
-    _btn.addEventListener("click", ()=>{
-      const _m = document.querySelector("#settingsModal");
-      if(!_m) return;
-      const qN = document.querySelector("#setQuotaNew"); if(qN) qN.value = settings.quotaNew;
-      const qR = document.querySelector("#setQuotaReview"); if(qR) qR.value = settings.quotaReview;
-      const cE = document.querySelector("#setChronoEnabled"); if(cE) cE.checked = settings.chronoEnabled;
-      const cM = document.querySelector("#setChronoMode"); if(cM) cM.value = settings.chronoMode;
-      const cS = document.querySelector("#setChronoSeconds"); if(cS) cS.value = settings.chronoSeconds;
-      const modeRow = document.querySelector("#chronoModeRow");
-      const downRow = document.querySelector("#chronoDownRow");
-      if(modeRow) modeRow.style.display = (cE && cE.checked) ? "flex" : "none";
-      if(downRow) downRow.style.display = (cE && cE.checked && cM && cM.value === "down") ? "flex" : "none";
-      _m.classList.add("open");
-    });
-  }
-  const _close = document.querySelector("#settingsClose");
-  const _backdrop = document.querySelector("#settingsBackdrop");
-  function _applyAndClose(){
-    const qN = parseInt(document.querySelector("#setQuotaNew")?.value) || 3;
-    const qR = parseInt(document.querySelector("#setQuotaReview")?.value) || 3;
-    const cE = document.querySelector("#setChronoEnabled")?.checked || false;
-    const cM = document.querySelector("#setChronoMode")?.value || "up";
-    const cS = Math.max(10, parseInt(document.querySelector("#setChronoSeconds")?.value) || 180);
-    settings = { quotaNew: Math.max(1,qN), quotaReview: Math.max(0,qR), chronoEnabled: cE, chronoMode: cM, chronoSeconds: cS };
-    saveSettings(settings);
-    chronoRender();
-    updateSessionChip();
-    const _m = document.querySelector("#settingsModal");
-    if(_m) _m.classList.remove("open");
-  }
-  if(_close) _close.addEventListener("click", _applyAndClose);
-  if(_backdrop) _backdrop.addEventListener("click", _applyAndClose);
-  const _cE = document.querySelector("#setChronoEnabled");
-  if(_cE) _cE.addEventListener("change", ()=>{
-    const modeRow = document.querySelector("#chronoModeRow");
-    const downRow = document.querySelector("#chronoDownRow");
-    const cM = document.querySelector("#setChronoMode");
-    if(modeRow) modeRow.style.display = _cE.checked ? "flex" : "none";
-    if(downRow) downRow.style.display = (_cE.checked && cM && cM.value === "down") ? "flex" : "none";
-  });
-  const _cM = document.querySelector("#setChronoMode");
-  if(_cM) _cM.addEventListener("change", ()=>{
-    const downRow = document.querySelector("#chronoDownRow");
-    const cE = document.querySelector("#setChronoEnabled");
-    if(downRow) downRow.style.display = (cE && cE.checked && _cM.value === "down") ? "flex" : "none";
-  });
-  start();
-});
+document.addEventListener("DOMContentLoaded", start);
 })();
