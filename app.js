@@ -36,9 +36,15 @@ function tirageFromC(c){
   return n.split("").sort((a,b)=>a.localeCompare(b,"fr")).join("");
 }
 function setMessage(t,cls){
-  const el=$("#msg"); if(!el) return;
-  el.textContent=t||"";
-  el.className=cls?"msg "+cls:"msg";
+  const el=$("#msg");
+  if(!el) return;
+  if(cls==="err"){
+    el.textContent = t || "";
+    el.className = "msg err";
+  }else{
+    el.textContent = "";
+    el.className = "msg";
+  }
 }
 function currentRedirectUri(){
   const u = new URL(window.location.href);
@@ -58,6 +64,7 @@ function defaultState(){
     lists: {},
     archiveNext: 1,
     archiveBySeq: {},
+    revisionSnoozeDate: "",
     currentRun: null
   };
 }
@@ -88,98 +95,27 @@ function saveLocal(st){
 }
 
 /* ===========================
-   SETTINGS
+   SRS
 =========================== */
-const SETTINGS_KEY = "SEQODS_SETTINGS_V1";
-const SETTINGS_DEFAULT = { quotaNew:3, quotaReview:3, chronoEnabled:false, chronoMode:"up", chronoSeconds:180 };
-function loadSettings(){
-  try{ return Object.assign({}, SETTINGS_DEFAULT, JSON.parse(localStorage.getItem(SETTINGS_KEY)||"null")); }
-  catch{ return Object.assign({}, SETTINGS_DEFAULT); }
+const INTERVALS=[1,3,7,14,30,60,120];
+function nextInterval(cur){
+  const i=INTERVALS.indexOf(cur);
+  if(i<0) return 3;
+  return INTERVALS[Math.min(INTERVALS.length-1,i+1)];
 }
-function saveSettings(s){ try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }catch{} }
-let settings = loadSettings();
-
-/* ===========================
-   LISTE STATE
-=========================== */
 function ensureListState(st, seqIndex){
   const k=String(seqIndex);
   if(!st.lists[k]){
-    st.lists[k] = { seen:false, validated:false, lastResult:"", lastSeen:"" };
+    st.lists[k] = {
+      due: todayStr(),
+      interval: 1,
+      seen: false,
+      validated: false,
+      lastResult: "",
+      lastSeen: ""
+    };
   }
   return st.lists[k];
-}
-
-/* ===========================
-   SESSION QUOTA
-=========================== */
-let sessionProgress = { newDone:0, reviewDone:0, beyondQuota:false };
-function resetSessionProgress(){ sessionProgress = { newDone:0, reviewDone:0, beyondQuota:false }; updateSessionChip(); }
-function updateSessionChip(){
-  const el = $("#sessionChip"); if(!el) return;
-  if(sessionProgress.beyondQuota){ el.textContent = "Session libre"; return; }
-  const dN = Math.min(sessionProgress.newDone, settings.quotaNew);
-  const dR = Math.min(sessionProgress.reviewDone, settings.quotaReview);
-  el.textContent = "Nouv. "+dN+"/"+settings.quotaNew+" · Rev. "+dR+"/"+settings.quotaReview;
-}
-
-/* ===========================
-   CHRONO
-=========================== */
-let chronoInterval=null, chronoElapsed=0, chronoExpired=false;
-function chronoFormat(s){ const m=Math.floor(s/60),sec=s%60; return String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0"); }
-function chronoUpdate(){
-  const el=$("#chronoDisplay"); if(!el) return;
-  if(settings.chronoMode==="down"){
-    const r=Math.max(0, settings.chronoSeconds-chronoElapsed);
-    el.textContent=chronoFormat(r);
-    if(r===0 && !chronoExpired){ chronoExpired=true; el.classList.add("chronoExpired"); }
-  }else{ el.textContent=chronoFormat(chronoElapsed); }
-}
-function chronoStart(){
-  chronoStop(); chronoElapsed=0; chronoExpired=false;
-  const el=$("#chronoDisplay"); if(el) el.classList.remove("chronoExpired");
-  chronoUpdate();
-  if(!settings.chronoEnabled) return;
-  chronoInterval=setInterval(()=>{ chronoElapsed++; chronoUpdate(); },1000);
-}
-function chronoStop(){ if(chronoInterval){ clearInterval(chronoInterval); chronoInterval=null; } }
-function chronoRender(){
-  const w=$("#chronoWrap"); if(!w) return;
-  w.style.display = settings.chronoEnabled ? "flex" : "none";
-  if(!settings.chronoEnabled) chronoStop();
-}
-
-/* ===========================
-   SETTINGS MODAL
-=========================== */
-function openSettings(){
-  const m=$("#settingsModal"); if(!m) return;
-  const qN=$("#setQuotaNew"); if(qN) qN.value=settings.quotaNew;
-  const qR=$("#setQuotaReview"); if(qR) qR.value=settings.quotaReview;
-  const cE=$("#setChronoEnabled"); if(cE) cE.checked=settings.chronoEnabled;
-  const cM=$("#setChronoMode"); if(cM) cM.value=settings.chronoMode;
-  const cS=$("#setChronoSeconds"); if(cS) cS.value=settings.chronoSeconds;
-  refreshChronoRows();
-  m.classList.add("open");
-}
-function closeSettings(){
-  const m=$("#settingsModal"); if(m) m.classList.remove("open");
-}
-function applySettings(){
-  const qN=parseInt($("#setQuotaNew")?.value)||3;
-  const qR=parseInt($("#setQuotaReview")?.value)||3;
-  const cE=$("#setChronoEnabled")?.checked||false;
-  const cM=$("#setChronoMode")?.value||"up";
-  const cS=Math.max(10,parseInt($("#setChronoSeconds")?.value)||180);
-  settings={ quotaNew:Math.max(1,qN), quotaReview:Math.max(0,qR), chronoEnabled:cE, chronoMode:cM, chronoSeconds:cS };
-  saveSettings(settings); chronoRender(); updateSessionChip(); closeSettings();
-}
-function refreshChronoRows(){
-  const cE=$("#setChronoEnabled"), cM=$("#setChronoMode");
-  const modeRow=$("#chronoModeRow"), downRow=$("#chronoDownRow");
-  if(modeRow) modeRow.style.display=(cE&&cE.checked)?"flex":"none";
-  if(downRow) downRow.style.display=(cE&&cE.checked&&cM&&cM.value==="down")?"flex":"none";
 }
 
 /* ===========================
@@ -518,6 +454,8 @@ const C = DATA?.c || [];
 const E = DATA?.e || [];
 const F = DATA?.f || [];
 const A = DATA?.a || {};
+const D = DATA?.d || [];   // dictionnaire ODS9 complet (toutes formes)
+const R = DATA?.r || {};   // rallonges par mot canonique
 
 const sequences = [];
 for(let start=0; start+11<C.length; start+=12){
@@ -536,7 +474,7 @@ let found = new Set();
 let hintMode = Array(10).fill("none");
 let noHelpRun = true;
 let syncTimer = null;
-let DICT = new Set();
+let DICT = new Set();  // sera rempli avec D (ODS9 complet) au démarrage
 
 /* ===========================
    HELPERS UI / SYNC
@@ -556,35 +494,52 @@ function moveNewButtonForMobile(){ /* bouton Nouveau supprimé */ }
 function openDef(defText, titleWord, canonForAnagrams, showAnagrams){
   const tEl=$("#defTitle"), bEl=$("#defBody"), mEl=$("#defModal");
   if(!tEl || !bEl || !mEl) return;
-  tEl.textContent=titleWord||"";
-  bEl.textContent=defText||"(definition absente)";
-  const base=normalizeWord(canonForAnagrams||titleWord||"");
-  // Anagrammes
+
+  tEl.textContent = titleWord || "";
+  bEl.textContent = defText || "(definition absente)";
+
+  const base=normalizeWord(canonForAnagrams || titleWord || "");
+
+  // Anagrammes (seulement quand showAnagrams=true)
   const anaWrap=$("#anaWrap"), ana=$("#defAna");
   if(anaWrap && ana){
-    if(!showAnagrams || !base){ anaWrap.style.display="none"; ana.textContent=""; }
-    else{
-      const tir=base.split("").sort((a,b)=>a.localeCompare(b,"fr")).join("");
-      const lst=(tir&&A[tir])?A[tir].slice():[];
-      const filtered=lst.filter(x=>normalizeWord(x)!==base);
-      if(!filtered.length){ anaWrap.style.display="none"; ana.textContent=""; }
-      else{
+    if(!showAnagrams || !base){
+      anaWrap.style.display="none";
+      ana.textContent="";
+    }else{
+      const tir = base.split("").sort((a,b)=>a.localeCompare(b,"fr")).join("");
+      const lst = (tir && A[tir]) ? A[tir].slice() : [];
+      const filtered = lst.filter(x=>normalizeWord(x)!==base);
+
+      if(filtered.length===0){
+        anaWrap.style.display="none";
+        ana.textContent="";
+      }else{
         anaWrap.style.display="block";
-        const shown=filtered.slice(0,60);
-        ana.textContent=shown.join(" • ")+(filtered.length>60?" … (+"+( filtered.length-60)+")":"");
+        const shown = filtered.slice(0,60);
+        ana.textContent = shown.join(" \u2022 ") + (filtered.length>60 ? ` \u2026 (+${filtered.length-60})` : "");
       }
     }
   }
-  // Rallonges
+
+  // Rallonges (seulement quand showAnagrams=true, comme les anagrammes)
   const rallWrap=$("#rallWrap"), rallEl=$("#defRall");
   if(rallWrap && rallEl){
-    if(!showAnagrams || !base){ rallWrap.style.display="none"; rallEl.textContent=""; }
-    else{
-      const lst=R[base]||[];
-      if(!lst.length){ rallWrap.style.display="none"; rallEl.textContent=""; }
-      else{ rallWrap.style.display="block"; rallEl.textContent=lst.join(" • "); }
+    if(!showAnagrams || !base){
+      rallWrap.style.display="none";
+      rallEl.textContent="";
+    }else{
+      const lst = R[base] || [];
+      if(lst.length===0){
+        rallWrap.style.display="none";
+        rallEl.textContent="";
+      }else{
+        rallWrap.style.display="block";
+        rallEl.textContent = lst.join(" \u2022 ");
+      }
     }
   }
+
   mEl.classList.add("open");
 }
 function closeDef(){
@@ -740,71 +695,70 @@ function restoreCurrentRunIfAny(){
 /* ===========================
    PICK / REVIEW POLICY
 =========================== */
+function getDueReviewIndexes(){
+  const today = todayStr();
+  const out = [];
+  for(let i=0;i<TOTAL;i++){
+    const ls = ensureListState(state, i);
+    if(ls.seen && cmpDate(ls.due || today, today) <= 0){
+      out.push(i);
+    }
+  }
+  return out;
+}
+
 function getNewIndexes(){
-  const out=[];
-  for(let i=0;i<TOTAL;i++){ if(!ensureListState(state,i).seen) out.push(i); }
+  const out = [];
+  for(let i=0;i<TOTAL;i++){
+    const ls = ensureListState(state, i);
+    if(!ls.seen){
+      out.push(i);
+    }
+  }
   return out;
 }
-function getSeenIndexes(){
-  const out=[];
-  for(let i=0;i<TOTAL;i++){ if(ensureListState(state,i).seen) out.push(i); }
-  return out;
-}
-function reviewWeight(ls){
-  const today=todayStr();
-  const last=ls.lastSeen||today;
-  const [y1,m1,d1]=today.split("-").map(Number);
-  const [y2,m2,d2]=last.split("-").map(Number);
-  const days=Math.round((new Date(y1,m1-1,d1)-new Date(y2,m2-1,d2))/864e5);
-  return Math.max(1,days) * (ls.lastResult==="help" ? 1.5 : 1);
-}
-function weightedPick(indexes){
-  const w=indexes.map(i=>reviewWeight(ensureListState(state,i)));
-  const total=w.reduce((a,b)=>a+b,0);
-  if(total<=0) return indexes[Math.floor(Math.random()*indexes.length)];
-  let r=Math.random()*total;
-  for(let k=0;k<indexes.length;k++){ r-=w[k]; if(r<=0) return indexes[k]; }
-  return indexes[indexes.length-1];
-}
+
 function pickSpecificSequence(seqIndex){
-  currentSeqIndex=seqIndex;
-  seq=sequences[currentSeqIndex];
-  targets=buildTargetsForSeq(currentSeqIndex)||[];
-  found=new Set();
-  hintMode=Array(10).fill("none");
-  noHelpRun=true;
+  currentSeqIndex = seqIndex;
+  seq = sequences[currentSeqIndex];
+  targets = buildTargetsForSeq(currentSeqIndex) || [];
+  found = new Set();
+  hintMode = Array(10).fill("none");
+  noHelpRun = true;
   saveCurrentRun();
   scheduleSync();
   return true;
 }
-function quotaDone(){
-  return sessionProgress.newDone>=settings.quotaNew && sessionProgress.reviewDone>=settings.quotaReview;
-}
-function pickAccordingPolicy(isFirstOfSession=false){
-  if(isFirstOfSession) resetSessionProgress();
-  const newOnes=getNewIndexes(), seenOnes=getSeenIndexes();
-  if(sessionProgress.beyondQuota){
-    const pool=newOnes.length?newOnes:seenOnes;
-    if(!pool.length){ setMessage("Toutes les listes ont ete jouees.","warn"); return false; }
-    return pickSpecificSequence(newOnes.length ? pool[Math.floor(Math.random()*pool.length)] : weightedPick(pool));
+
+function pickAccordingPolicy(forcePlainNew=false){
+  const today = todayStr();
+  const dueReviews = getDueReviewIndexes();
+  const newOnes = getNewIndexes();
+
+  let pool = [];
+
+  if(!forcePlainNew && dueReviews.length && state.revisionSnoozeDate !== today){
+    const replay = window.confirm("Des listes sont à réviser. Voulez-vous les rejouer ?");
+    if(replay){
+      pool = dueReviews;
+    }else{
+      state.revisionSnoozeDate = today;
+      state.updatedAt = Date.now();
+      saveLocal(state);
+      persistState().catch(()=>{});
+      pool = newOnes.length ? newOnes : dueReviews;
+    }
+  }else{
+    pool = newOnes.length ? newOnes : dueReviews;
   }
-  const needNew=sessionProgress.newDone<settings.quotaNew;
-  const needReview=sessionProgress.reviewDone<settings.quotaReview;
-  let pool=[], mode="";
-  if(needNew && needReview){
-    if(sessionProgress.newDone>sessionProgress.reviewDone && seenOnes.length){ mode="review"; pool=seenOnes; }
-    else if(newOnes.length){ mode="new"; pool=newOnes; }
-    else { mode="review"; pool=seenOnes; }
-  } else if(needNew && newOnes.length){ mode="new"; pool=newOnes; }
-  else if(needReview && seenOnes.length){ mode="review"; pool=seenOnes; }
-  else {
-    sessionProgress.beyondQuota=true; updateSessionChip();
-    const all=newOnes.length?newOnes:seenOnes;
-    if(!all.length){ setMessage("Toutes les listes ont ete jouees.","warn"); return false; }
-    return pickSpecificSequence(newOnes.length ? all[Math.floor(Math.random()*all.length)] : weightedPick(seenOnes));
+
+  if(!pool.length){
+    setMessage("Aucune liste disponible.", "warn");
+    return false;
   }
-  if(!pool.length){ setMessage("Aucune liste disponible.","warn"); return false; }
-  return pickSpecificSequence(mode==="review" ? weightedPick(pool) : pool[Math.floor(Math.random()*pool.length)]);
+
+  const seqIndex = pool[Math.floor(Math.random()*pool.length)];
+  return pickSpecificSequence(seqIndex);
 }
 
 /* ===========================
@@ -917,19 +871,28 @@ function markAidUsed(){
 }
 
 function finalizeList(wasSolvedWithHelp){
-  const ls=ensureListState(state,currentSeqIndex);
-  const wasNew=!ls.seen;
-  ls.seen=true; ls.lastSeen=todayStr();
-  if(wasSolvedWithHelp){ ls.validated=false; ls.lastResult="help"; setMessage("Liste terminee, mais avec aide.","warn"); }
-  else { ls.validated=true; ls.lastResult="ok"; setMessage("Validee sans aide !","ok"); }
-  if(!sessionProgress.beyondQuota){
-    if(wasNew) sessionProgress.newDone++; else sessionProgress.reviewDone++;
-    if(quotaDone()){ sessionProgress.beyondQuota=true; }
+  const ls = ensureListState(state, currentSeqIndex);
+  ls.seen = true;
+  ls.lastSeen = todayStr();
+
+  if(wasSolvedWithHelp){
+    ls.validated = false;
+    ls.lastResult = "help";
+    ls.interval = 3;
+    ls.due = addDays(todayStr(), 3);
+    setMessage("Liste terminée, mais avec aide.", "warn");
+  }else{
+    ls.validated = true;
+    ls.lastResult = "ok";
+    ls.interval = nextInterval(ls.interval || 1);
+    ls.due = addDays(todayStr(), ls.interval);
+    setMessage("Validée sans aide.", "ok");
   }
-  updateSessionChip();
-  chronoStop();
-  state.updatedAt=Date.now();
-  clearCurrentRun(); computeStats(); persistState().catch(()=>{});
+
+  state.updatedAt = Date.now();
+  clearCurrentRun();
+  computeStats();
+  persistState().catch(()=>{});
 }
 
 function updateCounter(){
@@ -1183,18 +1146,7 @@ function wire(){
   if(defClose) defClose.addEventListener("click", closeDef);
   const defBackdrop=$("#defBackdrop");
   if(defBackdrop) defBackdrop.addEventListener("click", closeDef);
-
-  // Settings via délégation sur document (évite problème z-index backdrop)
-  document.addEventListener("click",(e)=>{
-    if(e.target.closest("#btnSettings"))      { openSettings(); return; }
-    if(e.target.closest("#settingsClose"))    { applySettings(); return; }
-    if(e.target.closest("#settingsBackdrop")) { applySettings(); return; }
-  });
-  document.addEventListener("change",(e)=>{
-    if(e.target.id==="setChronoEnabled"||e.target.id==="setChronoMode") refreshChronoRows();
-  });
-
-  document.addEventListener("keydown",(e)=>{ if(e.key==="Escape"){ closeDef(); closeSettings(); } });
+  document.addEventListener("keydown",(e)=>{ if(e.key==="Escape") closeDef(); });
 
   moveNewButtonForMobile();
   window.addEventListener("resize", moveNewButtonForMobile);
@@ -1206,18 +1158,20 @@ function wire(){
 function renderAll(){
   renderBounds();
   renderSlots();
-  const c=$("#compteur"); if(c) c.textContent=found.size+"/10";
+  const c=$("#compteur");
+  if(c) c.textContent = `${found.size}/10`;
   computeStats();
   resetSolutionsBtn();
-  updateSessionChip();
-  chronoStart();
 }
 
 /* ===========================
    START
 =========================== */
 async function start(){
-  DICT = new Set(C.map(w => normalizeWord(w)));
+  // DICT = dictionnaire ODS9 complet si disponible, sinon fallback sur C
+  DICT = D.length > 0
+    ? new Set(D.map(w => normalizeWord(w)))
+    : new Set(C.map(w => normalizeWord(w)));
   wire();
   moveNewButtonForMobile();
 
