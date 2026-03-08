@@ -454,6 +454,8 @@ const C = DATA?.c || [];
 const E = DATA?.e || [];
 const F = DATA?.f || [];
 const A = DATA?.a || {};
+const D = DATA?.d || [];   // dictionnaire ODS9 complet (toutes formes)
+const R = DATA?.r || {};   // rallonges par mot canonique
 
 const sequences = [];
 for(let start=0; start+11<C.length; start+=12){
@@ -472,7 +474,7 @@ let found = new Set();
 let hintMode = Array(10).fill("none");
 let noHelpRun = true;
 let syncTimer = null;
-let DICT = new Set();
+let DICT = new Set();  // sera rempli avec D (ODS9 complet) au démarrage
 
 /* ===========================
    HELPERS UI / SYNC
@@ -494,7 +496,7 @@ function openDef(defText, titleWord, canonForAnagrams, showAnagrams){
   if(!tEl || !bEl || !mEl) return;
 
   tEl.textContent = titleWord || "";
-  bEl.textContent = defText || "(définition absente)";
+  bEl.textContent = defText || "(definition absente)";
 
   const anaWrap=$("#anaWrap"), ana=$("#defAna");
   if(anaWrap && ana){
@@ -513,7 +515,26 @@ function openDef(defText, titleWord, canonForAnagrams, showAnagrams){
       }else{
         anaWrap.style.display="block";
         const shown = filtered.slice(0,60);
-        ana.textContent = shown.join(" • ") + (filtered.length>60 ? ` … (+${filtered.length-60})` : "");
+        ana.textContent = shown.join(" \u2022 ") + (filtered.length>60 ? ` \u2026 (+${filtered.length-60})` : "");
+      }
+    }
+  }
+
+  // Rallonges
+  const rallWrap=$("#rallWrap"), rallEl=$("#defRall");
+  if(rallWrap && rallEl){
+    if(!showAnagrams){
+      rallWrap.style.display="none";
+      rallEl.textContent="";
+    }else{
+      const base=normalizeWord(canonForAnagrams || titleWord || "");
+      const lst = base ? (R[base] || []) : [];
+      if(lst.length===0){
+        rallWrap.style.display="none";
+        rallEl.textContent="";
+      }else{
+        rallWrap.style.display="block";
+        rallEl.textContent = lst.join(" \u2022 ");
       }
     }
   }
@@ -1146,7 +1167,10 @@ function renderAll(){
    START
 =========================== */
 async function start(){
-  DICT = new Set(C.map(w => normalizeWord(w)));
+  // DICT = dictionnaire ODS9 complet si disponible, sinon fallback sur C
+  DICT = D.length > 0
+    ? new Set(D.map(w => normalizeWord(w)))
+    : new Set(C.map(w => normalizeWord(w)));
   wire();
   moveNewButtonForMobile();
 
