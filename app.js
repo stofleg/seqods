@@ -38,13 +38,8 @@ function tirageFromC(c){
 function setMessage(t,cls){
   const el=$("#msg");
   if(!el) return;
-  if(cls==="err"){
-    el.textContent = t || "";
-    el.className = "msg err";
-  }else{
-    el.textContent = "";
-    el.className = "msg";
-  }
+  el.textContent = t || "";
+  el.className = cls ? "msg " + cls : "msg";
 }
 function currentRedirectUri(){
   const u = new URL(window.location.href);
@@ -64,7 +59,6 @@ function defaultState(){
     lists: {},
     archiveNext: 1,
     archiveBySeq: {},
-    revisionSnoozeDate: "",
     currentRun: null
   };
 }
@@ -95,20 +89,32 @@ function saveLocal(st){
 }
 
 /* ===========================
-   SRS
+   SETTINGS
 =========================== */
-const INTERVALS=[1,3,7,14,30,60,120];
-function nextInterval(cur){
-  const i=INTERVALS.indexOf(cur);
-  if(i<0) return 3;
-  return INTERVALS[Math.min(INTERVALS.length-1,i+1)];
+const SETTINGS_KEY = "SEQODS_SETTINGS_V1";
+const SETTINGS_DEFAULT = {
+  quotaNew: 3,
+  quotaReview: 3,
+  chronoEnabled: false,
+  chronoMode: "up",
+  chronoSeconds: 180
+};
+function loadSettings(){
+  try{ return Object.assign({}, SETTINGS_DEFAULT, JSON.parse(localStorage.getItem(SETTINGS_KEY)||"null")); }
+  catch{ return Object.assign({}, SETTINGS_DEFAULT); }
 }
+function saveSettings(s){
+  try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }catch{}
+}
+let settings = loadSettings();
+
+/* ===========================
+   LISTE STATE
+=========================== */
 function ensureListState(st, seqIndex){
   const k=String(seqIndex);
   if(!st.lists[k]){
     st.lists[k] = {
-      due: todayStr(),
-      interval: 1,
       seen: false,
       validated: false,
       lastResult: "",
@@ -117,6 +123,89 @@ function ensureListState(st, seqIndex){
   }
   return st.lists[k];
 }
+
+/* ===========================
+   SESSION QUOTA
+=========================== */
+let sessionProgress = { newDone: 0, reviewDone: 0, beyondQuota: false };
+
+function resetSessionProgress(){
+  sessionProgress = { newDone: 0, reviewDone: 0, beyondQuota: false };
+  updateSessionChip();
+}
+
+function updateSessionChip(){
+  const el = $("#sessionChip");
+  if(!el) return;
+  if(sessionProgress.beyondQuota){
+    el.textContent = "Session libre";
+    return;
+  }
+  const qN = settings.quotaNew;
+  const qR = settings.quotaReview;
+  const dN = Math.min(sessionProgress.newDone, qN);
+  const dR = Math.min(sessionProgress.reviewDone, qR);
+  el.textContent = `Nouv. ${dN}/${qN} \u00b7 Rev. ${dR}/${qR}`;
+}
+
+/* ===========================
+   CHRONO
+=========================== */
+let chronoInterval = null;
+let chronoElapsed = 0;   // secondes ecoulees (mode up) ou restantes (mode down)
+let chronoExpired = false;
+
+function chronoFormat(s){
+  const m = Math.floor(Math.abs(s) / 60);
+  const sec = Math.abs(s) % 60;
+  const sign = s < 0 ? "-" : "";
+  return sign + String(m).padStart(2,"0") + ":" + String(sec).padStart(2,"0");
+}
+
+function chronoUpdate(){
+  const el = $("#chronoDisplay");
+  if(!el) return;
+  if(settings.chronoMode === "down"){
+    const remaining = settings.chronoSeconds - chronoElapsed;
+    el.textContent = chronoFormat(Math.max(remaining, 0));
+    if(remaining <= 0 && !chronoExpired){
+      chronoExpired = true;
+      el.classList.add("chronoExpired");
+    }
+  } else {
+    el.textContent = chronoFormat(chronoElapsed);
+  }
+}
+
+function chronoStart(){
+  chronoStop();
+  chronoElapsed = 0;
+  chronoExpired = false;
+  const el = $("#chronoDisplay");
+  if(el) el.classList.remove("chronoExpired");
+  chronoUpdate();
+  if(!settings.chronoEnabled) return;
+  chronoInterval = setInterval(()=>{
+    chronoElapsed++;
+    chronoUpdate();
+  }, 1000);
+}
+
+function chronoStop(){
+  if(chronoInterval){ clearInterval(chronoInterval); chronoInterval = null; }
+}
+
+function chronoRender(){
+  const wrap = $("#chronoWrap");
+  if(!wrap) return;
+  if(settings.chronoEnabled){
+    wrap.style.display = "flex";
+  } else {
+    wrap.style.display = "none";
+    chronoStop();
+  }
+}
+
 
 /* ===========================
    DROPBOX TOKENS
@@ -454,8 +543,6 @@ const C = DATA?.c || [];
 const E = DATA?.e || [];
 const F = DATA?.f || [];
 const A = DATA?.a || {};
-const D = DATA?.d || [];   // dictionnaire ODS9 complet (toutes formes)
-const R = DATA?.r || {};   // rallonges par mot canonique
 
 const sequences = [];
 for(let start=0; start+11<C.length; start+=12){
@@ -474,7 +561,7 @@ let found = new Set();
 let hintMode = Array(10).fill("none");
 let noHelpRun = true;
 let syncTimer = null;
-let DICT = new Set();  // sera rempli avec D (ODS9 complet) au démarrage
+let DICT = new Set();
 
 /* ===========================
    HELPERS UI / SYNC
@@ -498,9 +585,9 @@ function openDef(defText, titleWord, canonForAnagrams, showAnagrams){
   tEl.textContent = titleWord || "";
   bEl.textContent = defText || "(definition absente)";
 
-  const base=normalizeWord(canonForAnagrams || titleWord || "");
+  const base = normalizeWord(canonForAnagrams || titleWord || "");
 
-  // Anagrammes (seulement quand showAnagrams=true)
+  // Anagrammes
   const anaWrap=$("#anaWrap"), ana=$("#defAna");
   if(anaWrap && ana){
     if(!showAnagrams || !base){
@@ -510,19 +597,18 @@ function openDef(defText, titleWord, canonForAnagrams, showAnagrams){
       const tir = base.split("").sort((a,b)=>a.localeCompare(b,"fr")).join("");
       const lst = (tir && A[tir]) ? A[tir].slice() : [];
       const filtered = lst.filter(x=>normalizeWord(x)!==base);
-
       if(filtered.length===0){
         anaWrap.style.display="none";
         ana.textContent="";
       }else{
         anaWrap.style.display="block";
         const shown = filtered.slice(0,60);
-        ana.textContent = shown.join(" \u2022 ") + (filtered.length>60 ? ` \u2026 (+${filtered.length-60})` : "");
+        ana.textContent = shown.join(" • ") + (filtered.length>60 ? ` … (+${filtered.length-60})` : "");
       }
     }
   }
 
-  // Rallonges (seulement quand showAnagrams=true, comme les anagrammes)
+  // Rallonges
   const rallWrap=$("#rallWrap"), rallEl=$("#defRall");
   if(rallWrap && rallEl){
     if(!showAnagrams || !base){
@@ -535,7 +621,7 @@ function openDef(defText, titleWord, canonForAnagrams, showAnagrams){
         rallEl.textContent="";
       }else{
         rallWrap.style.display="block";
-        rallEl.textContent = lst.join(" \u2022 ");
+        rallEl.textContent = lst.join(" • ");
       }
     }
   }
@@ -695,14 +781,11 @@ function restoreCurrentRunIfAny(){
 /* ===========================
    PICK / REVIEW POLICY
 =========================== */
-function getDueReviewIndexes(){
-  const today = todayStr();
+function getSeenIndexes(){
   const out = [];
   for(let i=0;i<TOTAL;i++){
     const ls = ensureListState(state, i);
-    if(ls.seen && cmpDate(ls.due || today, today) <= 0){
-      out.push(i);
-    }
+    if(ls.seen) out.push(i);
   }
   return out;
 }
@@ -711,11 +794,38 @@ function getNewIndexes(){
   const out = [];
   for(let i=0;i<TOTAL;i++){
     const ls = ensureListState(state, i);
-    if(!ls.seen){
-      out.push(i);
-    }
+    if(!ls.seen) out.push(i);
   }
   return out;
+}
+
+// Poids d'une liste pour la revision par interleaving.
+// Plus elle a ete vue il y a longtemps, plus son poids est fort.
+// Une liste jouee avec aide a un poids 1.5x superieur.
+function reviewWeight(ls){
+  if(!ls.seen) return 0;
+  const today = todayStr();
+  const last = ls.lastSeen || today;
+  const [y1,m1,d1] = today.split("-").map(Number);
+  const [y2,m2,d2] = last.split("-").map(Number);
+  const msDay = 864e5;
+  const days = Math.round((new Date(y1,m1-1,d1) - new Date(y2,m2-1,d2)) / msDay);
+  const ageFactor = Math.max(1, days);
+  const helpFactor = (ls.lastResult === "help") ? 1.5 : 1;
+  return ageFactor * helpFactor;
+}
+
+// Tirage aleatoire pondere dans un tableau d'indexes
+function weightedPick(indexes){
+  const weights = indexes.map(i => reviewWeight(ensureListState(state, i)));
+  const total = weights.reduce((a,b) => a+b, 0);
+  if(total <= 0) return indexes[Math.floor(Math.random()*indexes.length)];
+  let r = Math.random() * total;
+  for(let k=0; k<indexes.length; k++){
+    r -= weights[k];
+    if(r <= 0) return indexes[k];
+  }
+  return indexes[indexes.length-1];
 }
 
 function pickSpecificSequence(seqIndex){
@@ -730,34 +840,59 @@ function pickSpecificSequence(seqIndex){
   return true;
 }
 
-function pickAccordingPolicy(forcePlainNew=false){
-  const today = todayStr();
-  const dueReviews = getDueReviewIndexes();
+// Determine si on est encore dans le quota ou en mode libre
+function quotaDone(){
+  return sessionProgress.newDone >= settings.quotaNew &&
+         sessionProgress.reviewDone >= settings.quotaReview;
+}
+
+function pickAccordingPolicy(isFirstOfSession=false){
+  if(isFirstOfSession) resetSessionProgress();
+
   const newOnes = getNewIndexes();
+  const seenOnes = getSeenIndexes();
+
+  // Au-dela du quota : on continue librement (mix nouveau/revisions)
+  if(sessionProgress.beyondQuota){
+    const pool = newOnes.length ? newOnes : seenOnes;
+    if(!pool.length){ setMessage("Toutes les listes ont ete jouees.", "warn"); return false; }
+    const idx = pool === seenOnes ? weightedPick(pool) : pool[Math.floor(Math.random()*pool.length)];
+    return pickSpecificSequence(idx);
+  }
+
+  // Dans le quota : on equilibre nouvelles et revisions
+  const needNew    = sessionProgress.newDone    < settings.quotaNew;
+  const needReview = sessionProgress.reviewDone < settings.quotaReview;
 
   let pool = [];
+  let mode = "";
 
-  if(!forcePlainNew && dueReviews.length && state.revisionSnoozeDate !== today){
-    const replay = window.confirm("Des listes sont à réviser. Voulez-vous les rejouer ?");
-    if(replay){
-      pool = dueReviews;
-    }else{
-      state.revisionSnoozeDate = today;
-      state.updatedAt = Date.now();
-      saveLocal(state);
-      persistState().catch(()=>{});
-      pool = newOnes.length ? newOnes : dueReviews;
+  if(needNew && needReview){
+    // On alterne : si plus de nouvelles que de revisions jouees, on fait une revision
+    if(sessionProgress.newDone > sessionProgress.reviewDone && seenOnes.length){
+      mode = "review"; pool = seenOnes;
+    } else if(newOnes.length){
+      mode = "new"; pool = newOnes;
+    } else {
+      mode = "review"; pool = seenOnes;
     }
-  }else{
-    pool = newOnes.length ? newOnes : dueReviews;
+  } else if(needNew && newOnes.length){
+    mode = "new"; pool = newOnes;
+  } else if(needReview && seenOnes.length){
+    mode = "review"; pool = seenOnes;
+  } else {
+    // Quota atteint : on passe en mode libre
+    sessionProgress.beyondQuota = true;
+    updateSessionChip();
+    const all = newOnes.length ? newOnes : seenOnes;
+    if(!all.length){ setMessage("Toutes les listes ont ete jouees.", "warn"); return false; }
+    const idx = newOnes.length ? newOnes[Math.floor(Math.random()*newOnes.length)] : weightedPick(seenOnes);
+    return pickSpecificSequence(idx);
   }
 
-  if(!pool.length){
-    setMessage("Aucune liste disponible.", "warn");
-    return false;
-  }
+  if(!pool.length){ setMessage("Aucune liste disponible.", "warn"); return false; }
 
-  const seqIndex = pool[Math.floor(Math.random()*pool.length)];
+  const seqIndex = mode === "review" ? weightedPick(pool) : pool[Math.floor(Math.random()*pool.length)];
   return pickSpecificSequence(seqIndex);
 }
 
@@ -872,22 +1007,33 @@ function markAidUsed(){
 
 function finalizeList(wasSolvedWithHelp){
   const ls = ensureListState(state, currentSeqIndex);
+  const wasNew = !ls.seen;
   ls.seen = true;
   ls.lastSeen = todayStr();
 
   if(wasSolvedWithHelp){
     ls.validated = false;
     ls.lastResult = "help";
-    ls.interval = 3;
-    ls.due = addDays(todayStr(), 3);
-    setMessage("Liste terminée, mais avec aide.", "warn");
+    setMessage("Liste terminee, mais avec aide.", "warn");
   }else{
     ls.validated = true;
     ls.lastResult = "ok";
-    ls.interval = nextInterval(ls.interval || 1);
-    ls.due = addDays(todayStr(), ls.interval);
-    setMessage("Validée sans aide.", "ok");
+    setMessage("Validee sans aide !", "ok");
   }
+
+  // Mise a jour du quota session
+  if(!sessionProgress.beyondQuota){
+    if(wasNew) sessionProgress.newDone++;
+    else       sessionProgress.reviewDone++;
+
+    // Si le quota vient d'etre atteint, signaler le mode libre
+    if(quotaDone()){
+      sessionProgress.beyondQuota = true;
+    }
+  }
+  updateSessionChip();
+
+  chronoStop();
 
   state.updatedAt = Date.now();
   clearCurrentRun();
@@ -1098,13 +1244,60 @@ function wire(){
   if(btnD) btnD.addEventListener("click", async ()=>{
     const t = loadTokens();
     if(t && (t.refresh_token || hasValidAccessToken(t))){
-      setMessage("Synchronisation…", "");
+      setMessage("Synchronisation...", "");
       await persistState();
-      setMessage("Synchronisation terminée.", "ok");
+      setMessage("Synchronisation terminee.", "ok");
       return;
     }
     oauthStart();
   });
+
+  // Settings
+  const btnSettings = $("#btnSettings");
+  const settingsModal = $("#settingsModal");
+  const settingsClose = $("#settingsClose");
+  const settingsBackdrop = $("#settingsBackdrop");
+
+  function openSettings(){
+    const el = settingsModal;
+    if(!el) return;
+    // Remplir les champs avec les valeurs actuelles
+    const qN = $("#setQuotaNew"); if(qN) qN.value = settings.quotaNew;
+    const qR = $("#setQuotaReview"); if(qR) qR.value = settings.quotaReview;
+    const cE = $("#setChronoEnabled"); if(cE) cE.checked = settings.chronoEnabled;
+    const cM = $("#setChronoMode"); if(cM) cM.value = settings.chronoMode;
+    const cS = $("#setChronoSeconds"); if(cS) cS.value = settings.chronoSeconds;
+    updateChronoSettingsVisibility();
+    el.classList.add("open");
+  }
+  function closeSettings(){ if(settingsModal) settingsModal.classList.remove("open"); }
+  function updateChronoSettingsVisibility(){
+    const cE = $("#setChronoEnabled");
+    const row = $("#chronoDownRow");
+    if(row) row.style.display = (cE && cE.checked && $("#setChronoMode") && $("#setChronoMode").value === "down") ? "flex" : "none";
+    const modeRow = $("#chronoModeRow");
+    if(modeRow) modeRow.style.display = (cE && cE.checked) ? "flex" : "none";
+  }
+  function applySettings(){
+    const qN = parseInt($("#setQuotaNew")?.value) || 3;
+    const qR = parseInt($("#setQuotaReview")?.value) || 3;
+    const cE = $("#setChronoEnabled")?.checked || false;
+    const cM = $("#setChronoMode")?.value || "up";
+    const cS = Math.max(10, parseInt($("#setChronoSeconds")?.value) || 180);
+    settings = { quotaNew: Math.max(1,qN), quotaReview: Math.max(0,qR), chronoEnabled: cE, chronoMode: cM, chronoSeconds: cS };
+    saveSettings(settings);
+    chronoRender();
+    updateSessionChip();
+    closeSettings();
+  }
+
+  if(btnSettings) btnSettings.addEventListener("click", openSettings);
+  if(settingsClose) settingsClose.addEventListener("click", applySettings);
+  if(settingsBackdrop) settingsBackdrop.addEventListener("click", applySettings);
+  const setChronoEnabled = $("#setChronoEnabled");
+  if(setChronoEnabled) setChronoEnabled.addEventListener("change", updateChronoSettingsVisibility);
+  const setChronoMode = $("#setChronoMode");
+  if(setChronoMode) setChronoMode.addEventListener("change", updateChronoSettingsVisibility);
 
   const list=$("#liste");
   if(list) list.addEventListener("click",(e)=>{
@@ -1146,7 +1339,7 @@ function wire(){
   if(defClose) defClose.addEventListener("click", closeDef);
   const defBackdrop=$("#defBackdrop");
   if(defBackdrop) defBackdrop.addEventListener("click", closeDef);
-  document.addEventListener("keydown",(e)=>{ if(e.key==="Escape") closeDef(); });
+  document.addEventListener("keydown",(e)=>{ if(e.key==="Escape"){ closeDef(); closeSettings(); } });
 
   moveNewButtonForMobile();
   window.addEventListener("resize", moveNewButtonForMobile);
@@ -1162,18 +1355,21 @@ function renderAll(){
   if(c) c.textContent = `${found.size}/10`;
   computeStats();
   resetSolutionsBtn();
+  updateSessionChip();
+  chronoStart();
 }
 
 /* ===========================
    START
 =========================== */
 async function start(){
-  // DICT = dictionnaire ODS9 complet si disponible, sinon fallback sur C
   DICT = D.length > 0
     ? new Set(D.map(w => normalizeWord(w)))
     : new Set(C.map(w => normalizeWord(w)));
   wire();
   moveNewButtonForMobile();
+  chronoRender();
+  updateSessionChip();
 
   await oauthHandleRedirectIfNeeded();
   await loadStatePreferDropbox();
