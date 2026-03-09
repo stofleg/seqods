@@ -3,19 +3,18 @@
 const $ = (s)=>document.querySelector(s);
 
 /* ===========================
-   CONFIG DROPBOX
+   FIREBASE CONFIG
 =========================== */
-const DROPBOX_APP_KEY = "5r5cxyemzt778me";
-const DROPBOX_STATE_PATH = "/state.json"; // legacy — remplacé par userStatePath()
-const DROPBOX_ARCHIVE_DIR = "/cartes_vues";
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyA7rJeKcdHc6By15EBhOmYhFB_pA5J3aq4",
+  authDomain: "methods-8e4b1.firebaseapp.com",
+  projectId: "methods-8e4b1",
+  storageBucket: "methods-8e4b1.firebasestorage.app",
+  messagingSenderId: "622786673295",
+  appId: "1:622786673295:web:c276ef2ec2608b74e58efa"
+};
 
-const LS_TOKENS    = "SEQODS_DBX_TOKENS_V7";
-const LS_PKCE      = "SEQODS_DBX_PKCE_V6";
-const STORE_LOCAL  = "SEQODS_LOCAL_STATE_V7";
-const LS_SESSION   = "SEQODS_SESSION_V1";   // {pseudo, token}
-const DBX_USERS    = "/seqods_users.json";
-const DBX_STATE_PREFIX = "/seqods_state_";  // + pseudo + .json
-
+const FB_BASE = `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents`;
 
 /* ===========================
    CRYPTO UTILS
@@ -29,6 +28,297 @@ function randomToken(){
 }
 
 /* ===========================
+   FIRESTORE REST API
+=========================== */
+// Convertit un objet JS en document Firestore
+function toFirestore(obj){
+  function convert(val){
+    if(val === null || val === undefined) return {nullValue: null};
+    if(typeof val === "boolean") return {booleanValue: val};
+    if(typeof val === "number") return Number.isInteger(val) ? {integerValue: String(val)} : {doubleValue: val};
+    if(typeof val === "string") return {stringValue: val};
+    if(Array.isArray(val)) return {arrayValue: {values: val.map(convert)}};
+    if(typeof val === "object") return {mapValue: {fields: Object.fromEntries(Object.entries(val).map(([k,v])=>[k,convert(v)]))}};
+    return {stringValue: String(val)};
+  }
+  return {fields: Object.fromEntries(Object.entries(obj).map(([k,v])=>[k,convert(v)]))};
+}
+
+// Convertit un document Firestore en objet JS
+function fromFirestore(doc){
+  if(!doc || !doc.fields) return null;
+  function convert(val){
+    if(val.nullValue !== undefined) return null;
+    if(val.booleanValue !== undefined) return val.booleanValue;
+    if(val.integerValue !== undefined) return parseInt(val.integerValue);
+    if(val.doubleValue !== undefined) return val.doubleValue;
+    if(val.stringValue !== undefined) return val.stringValue;
+    if(val.arrayValue) return (val.arrayValue.values||[]).map(convert);
+    if(val.mapValue) return Object.fromEntries(Object.entries(val.mapValue.fields||{}).map(([k,v])=>[k,convert(v)]));
+    return null;
+  }
+  return Object.fromEntries(Object.entries(doc.fields).map(([k,v])=>[k,convert(v)]));
+}
+
+async function fbGet(collection, docId){
+  try{
+    const res = await fetch(`${FB_BASE}/${collection}/${docId}`);
+    if(res.status === 404) return {ok:false, err:"not_found"};
+    if(!res.ok) return {ok:false, err:"error"};
+    const data = await res.json();
+    return {ok:true, data: fromFirestore(data), name: data.name};
+  }catch(e){ return {ok:false, err:"network"}; }
+}
+
+async function fbSet(collection, docId, obj){
+  try{
+    const url = `${FB_BASE}/${collection}/${docId}`;
+    const res = await fetch(url, {
+      method: "PATCH",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(toFirestore(obj))
+    });
+    if(!res.ok) return {ok:false, err:"error"};
+    return {ok:true};
+  }catch(e){ return {ok:false, err:"network"}; }
+}
+
+/* ===========================
+   SESSION LOCALE
+=========================== */
+const LS_SESSION = "ODYSSEE_SESSION_V1";
+let currentUser = null; // {pseudo, token}
+
+function loadSession(){
+  try{ return JSON.parse(localStorage.getItem(LS_SESSION)||"null"); }
+  catch{ return null; }
+}
+function saveSession(s){
+  try{ localStorage.setItem(LS_SESSION, JSON.stringify(s)); }catch{}
+}
+function clearSession(){
+  try{ localStorage.removeItem(LS_SESSION); }catch{}
+  currentUser = null;
+}
+function localStateKey(){
+  return "ODYSSEE_STATE_" + (currentUser ? currentUser.pseudo : "guest");
+}
+
+/* ===========================
+   STATE LOCAL
+=========================== */
+const STORE_LOCAL = "ODYSSEE_STATE_V1";
+function defaultState(){
+  return { updatedAt:0, lists:{}, currentRun:null };
+}
+function mergeDefaults(obj){
+  const base = defaultState();
+  if(!obj || typeof obj !== "object") return base;
+  const out = Object.assign(base, obj);
+  out.lists = Object.assign({}, base.lists, obj.lists||{});
+  if(!out.currentRun || typeof out.currentRun !== "object") out.currentRun = null;
+  return out;
+}
+function loadLocal(){
+  try{ return mergeDefaults(JSON.parse(localStorage.getItem(localStateKey())||"null")); }
+  catch{ return defaultState(); }
+}
+function saveLocal(st){
+  try{ localStorage.setItem(localStateKey(), JSON.stringify(st)); }catch{}
+}
+
+/* ===========================
+   AUTH FIREBASE
+=========================== */
+async function authLogin(pseudo, password){
+  const res = await fbGet("users", pseudo.toLowerCase());
+  if(res.err==="not_found") return {ok:false, err:"Utilisateur inconnu."};
+  if(!res.ok) return {ok:false, err:"Impossible de contacter la base de données."};
+  const hash = await sha256(password);
+  if(res.data.passwordHash !== hash) return {ok:false, err:"Mot de passe incorrect."};
+  const token = randomToken();
+  await fbSet("users", pseudo.toLowerCase(), {...res.data, sessionToken: token});
+  return {ok:true, token, pseudo: res.data.pseudo || pseudo};
+}
+
+async function authRegister(pseudo, password, question, answer){
+  if(!pseudo || pseudo.length < 2) return {ok:false, err:"Pseudo trop court (min 2 caractères)."};
+  if(!password || password.length < 4) return {ok:false, err:"Mot de passe trop court (min 4 caractères)."};
+  const key = pseudo.toLowerCase();
+  const exists = await fbGet("users", key);
+  if(exists.ok) return {ok:false, err:"Ce pseudo est déjà pris."};
+  const hash = await sha256(password);
+  const ansHash = await sha256(answer.toLowerCase().trim());
+  const token = randomToken();
+  const res = await fbSet("users", key, {
+    pseudo, passwordHash:hash, question, answerHash:ansHash, sessionToken:token
+  });
+  if(!res.ok) return {ok:false, err:"Erreur lors de la création du compte."};
+  return {ok:true, token};
+}
+
+async function authRecover(pseudo, answer, newPassword){
+  if(!newPassword || newPassword.length < 4) return {ok:false, err:"Nouveau mot de passe trop court."};
+  const res = await fbGet("users", pseudo.toLowerCase());
+  if(res.err==="not_found") return {ok:false, err:"Utilisateur inconnu."};
+  if(!res.ok) return {ok:false, err:"Impossible de contacter la base de données."};
+  const ansHash = await sha256(answer.toLowerCase().trim());
+  if(res.data.answerHash !== ansHash) return {ok:false, err:"Réponse incorrecte."};
+  const newHash = await sha256(newPassword);
+  await fbSet("users", pseudo.toLowerCase(), {...res.data, passwordHash:newHash, sessionToken:randomToken()});
+  return {ok:true};
+}
+
+async function verifySessionToken(pseudo, token){
+  const res = await fbGet("users", pseudo.toLowerCase());
+  if(!res.ok) return false;
+  return res.data.sessionToken === token;
+}
+
+/* ===========================
+   PERSISTENCE STATE FIREBASE
+=========================== */
+async function loadStateFromFirebase(){
+  if(!currentUser) return;
+  const res = await fbGet("states", currentUser.pseudo.toLowerCase());
+  if(res.ok && res.data){
+    const remote = mergeDefaults(res.data);
+    const local = loadLocal();
+    const useRemote = (remote.updatedAt||0) >= (local.updatedAt||0);
+    state = useRemote ? remote : local;
+  } else {
+    state = defaultState();
+  }
+  saveLocal(state);
+}
+
+async function persistState(){
+  if(!currentUser) return;
+  saveLocal(state);
+  state.updatedAt = Date.now();
+  await fbSet("states", currentUser.pseudo.toLowerCase(), state);
+  saveLocal(state);
+}
+
+/* ===========================
+   AUTH UI
+=========================== */
+function showAuthScreen(){
+  const game=$("#gameScreen"), auth=$("#authScreen");
+  if(game) game.style.display="none";
+  if(auth) auth.style.display="flex";
+  setAuthView("login");
+}
+function showGameScreen(){
+  const game=$("#gameScreen"), auth=$("#authScreen");
+  if(auth) auth.style.display="none";
+  if(game) game.style.display="";
+}
+function setAuthView(view){
+  ["login","register","recover"].forEach(v=>{
+    const el=$("#auth_"+v); if(el) el.style.display=(v===view)?"block":"none";
+  });
+  const err=$("#authErr"); if(err){ err.textContent=""; err.className="msg"; }
+}
+function showAuthErr(msg, isOk=false){
+  const el=$("#authErr");
+  if(el){ el.textContent=msg; el.className=isOk?"msg ok":"msg err"; }
+}
+function authSetLoading(loading){
+  ["btnLogin","btnRegister","btnDoRecover"].forEach(id=>{
+    const el=$("#"+id); if(el) el.disabled=loading;
+  });
+}
+function updateUserChip(){
+  const el=$("#userChip");
+  if(el && currentUser) el.textContent=currentUser.pseudo;
+}
+
+function showWaitScreen(){
+  chronoStop();
+  seq=null; targets=[]; found=new Set(); hintMode=Array(10).fill("none"); solutionsShown=false;
+  const c=$("#compteur"); if(c) c.textContent="0/10";
+  const borneA=$("#borneA"), borneB=$("#borneB");
+  if(borneA){ borneA.textContent="—"; borneA.onclick=null; }
+  if(borneB){ borneB.textContent="—"; borneB.onclick=null; }
+  const list=$("#liste"); if(list) list.innerHTML="";
+  const msg=$("#msg"); if(msg){ msg.textContent="Prêt à jouer !"; msg.className="msg ok"; }
+  const btnS=$("#btnSolutions");
+  if(btnS){ btnS.textContent="Jouer"; btnS.dataset.mode="rejouer"; btnS.classList.remove("btnDanger"); }
+}
+
+function wireAuth(){
+  const btnLogin=$("#btnLogin");
+  if(btnLogin) btnLogin.addEventListener("click", async ()=>{
+    const pseudo=($("#authPseudo")?.value||"").trim();
+    const pass=$("#authPass")?.value||"";
+    if(!pseudo||!pass){ showAuthErr("Remplis tous les champs."); return; }
+    authSetLoading(true);
+    const res = await authLogin(pseudo, pass);
+    authSetLoading(false);
+    if(!res.ok){ showAuthErr(res.err); return; }
+    currentUser={pseudo: res.pseudo||pseudo, token:res.token};
+    saveSession(currentUser);
+    showGameScreen();
+    state=defaultState();
+    await loadStateFromFirebase();
+    updateUserChip();
+    showWaitScreen();
+    setInterval(()=>{ persistState().catch(()=>{}); }, 60000);
+  });
+
+  const btnRegister=$("#btnRegister");
+  if(btnRegister) btnRegister.addEventListener("click", async ()=>{
+    const pseudo=($("#regPseudo")?.value||"").trim();
+    const pass=$("#regPass")?.value||"";
+    const q=($("#regQuestion")?.value||"").trim();
+    const a=($("#regAnswer")?.value||"").trim();
+    if(!pseudo||!pass||!q||!a){ showAuthErr("Remplis tous les champs."); return; }
+    authSetLoading(true);
+    const res = await authRegister(pseudo, pass, q, a);
+    authSetLoading(false);
+    if(!res.ok){ showAuthErr(res.err); return; }
+    currentUser={pseudo, token:res.token};
+    saveSession(currentUser);
+    showGameScreen();
+    state=defaultState();
+    await loadStateFromFirebase();
+    updateUserChip();
+    showWaitScreen();
+    setInterval(()=>{ persistState().catch(()=>{}); }, 60000);
+  });
+
+  const btnDoRecover=$("#btnDoRecover");
+  if(btnDoRecover) btnDoRecover.addEventListener("click", async ()=>{
+    const pseudo=($("#recPseudo")?.value||"").trim();
+    const answer=($("#recAnswer")?.value||"").trim();
+    const newPass=$("#recNewPass")?.value||"";
+    if(!pseudo||!answer||!newPass){ showAuthErr("Remplis tous les champs."); return; }
+    authSetLoading(true);
+    const res = await authRecover(pseudo, answer, newPass);
+    authSetLoading(false);
+    if(!res.ok){ showAuthErr(res.err); return; }
+    showAuthErr("Mot de passe modifié ! Tu peux te connecter.", true);
+    setAuthView("login");
+  });
+
+  const toReg=$("#toRegister"); if(toReg) toReg.addEventListener("click",()=>setAuthView("register"));
+  const toLog=$("#toLogin"); if(toLog) toLog.addEventListener("click",()=>setAuthView("login"));
+  const toRec=$("#toRecover"); if(toRec) toRec.addEventListener("click",()=>setAuthView("recover"));
+  const toLog2=$("#toLogin2"); if(toLog2) toLog2.addEventListener("click",()=>setAuthView("login"));
+
+  ["authPass","regAnswer","recNewPass"].forEach(id=>{
+    const el=$("#"+id);
+    if(el) el.addEventListener("keydown",(e)=>{
+      if(e.key==="Enter"){
+        if(id==="authPass") $("#btnLogin")?.click();
+        else if(id==="regAnswer") $("#btnRegister")?.click();
+        else if(id==="recNewPass") $("#btnDoRecover")?.click();
+      }
+    });
+  });
+}
+
    UTIL
 =========================== */
 function normalizeWord(s){
@@ -69,71 +359,14 @@ function currentRedirectUri(){
 }
 function pad4(n){ return String(n).padStart(4, "0"); }
 
-
 /* ===========================
-   SESSION UTILISATEUR
-=========================== */
-let currentUser = null;  // {pseudo, token}
 
-function loadSession(){
-  try{ return JSON.parse(localStorage.getItem(LS_SESSION)||"null"); }
-  catch{ return null; }
-}
-function saveSession(s){
-  try{ localStorage.setItem(LS_SESSION, JSON.stringify(s)); }catch{}
-}
-function clearSession(){
-  try{ localStorage.removeItem(LS_SESSION); }catch{}
-  currentUser = null;
-}
-
-// Chemin Dropbox de l'état pour l'utilisateur courant
-function userStatePath(){
-  if(!currentUser) return "/seqods_state_guest.json";
-  return DBX_STATE_PREFIX + currentUser.pseudo + ".json";
-}
-
-/* ===========================
    LOCAL STATE
 =========================== */
-function defaultState(){
-  return {
-    updatedAt: 0,
-    dbxRev: null,
-    lists: {},
-    archiveNext: 1,
-    archiveBySeq: {},
-    revisionSnoozeDate: "",
-    currentRun: null
-  };
-}
-function mergeDefaults(obj){
-  const base = defaultState();
-  if(!obj || typeof obj !== "object") return base;
 
-  const out = Object.assign(base, obj);
-  out.lists = Object.assign({}, base.lists, obj.lists || {});
-  out.archiveBySeq = Object.assign({}, base.archiveBySeq, obj.archiveBySeq || {});
-  if(typeof out.archiveNext !== "number" || !Number.isFinite(out.archiveNext) || out.archiveNext < 1){
-    out.archiveNext = 1;
-  }
-  if(!out.currentRun || typeof out.currentRun !== "object"){
-    out.currentRun = null;
-  }
-  return out;
-}
-function localKey(){
-  return currentUser ? STORE_LOCAL+"_"+currentUser.pseudo : STORE_LOCAL;
-}
-function loadLocal(){
-  try{ return mergeDefaults(JSON.parse(localStorage.getItem(localKey())||"null")); }
-  catch{ return defaultState(); }
-}
-function saveLocal(st){
-  try{ localStorage.setItem(localKey(), JSON.stringify(st)); }catch{}
-}
 
 /* ===========================
+
    SRS
 =========================== */
 const INTERVALS=[1,3,7,14,30,60,120];
@@ -158,334 +391,7 @@ function ensureListState(st, seqIndex){
 }
 
 /* ===========================
-   DROPBOX TOKENS
-=========================== */
-function saveTokens(t){ try{ localStorage.setItem(LS_TOKENS, JSON.stringify(t)); }catch{} }
-function loadTokens(){ try{ return JSON.parse(localStorage.getItem(LS_TOKENS)||"null"); }catch{ return null; } }
-function hasValidAccessToken(t){
-  return t && t.access_token && t.expires_at && Date.now() < (t.expires_at - 30000);
-}
 
-/* ===========================
-   PKCE
-=========================== */
-function base64urlFromBytes(bytes){
-  let str = "";
-  for (let i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]);
-  return btoa(str).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
-}
-function randomVerifier(len=64){
-  const arr = new Uint8Array(len);
-  crypto.getRandomValues(arr);
-  return base64urlFromBytes(arr);
-}
-function sha256Sync(ascii){
-  function rightRotate(v, a){ return (v>>>a) | (v<<(32-a)); }
-  const mathPow = Math.pow;
-  const maxWord = mathPow(2, 32);
-
-  const words = [];
-  const bitLen = ascii.length * 8;
-
-  const hash = sha256Sync.h = sha256Sync.h || [];
-  const k = sha256Sync.k = sha256Sync.k || [];
-  let pc = k.length;
-
-  const isComp = {};
-  for (let c = 2; pc < 64; c++) {
-    if (!isComp[c]) {
-      for (let i = 0; i < 313; i += c) isComp[i] = c;
-      hash[pc] = (mathPow(c, .5) * maxWord) | 0;
-      k[pc++]  = (mathPow(c, 1/3) * maxWord) | 0;
-    }
-  }
-
-  ascii += "\x80";
-  while (ascii.length % 64 - 56) ascii += "\x00";
-  for (let i = 0; i < ascii.length; i++) {
-    const j = ascii.charCodeAt(i);
-    words[i>>2] |= j << ((3 - i) % 4) * 8;
-  }
-  words[words.length] = (bitLen / maxWord) | 0;
-  words[words.length] = (bitLen) | 0;
-
-  for (let j = 0; j < words.length; ) {
-    const w = words.slice(j, j += 16);
-    const old = hash.slice(0);
-
-    for (let i = 0; i < 64; i++) {
-      const w15 = w[i - 15], w2 = w[i - 2];
-      const a = hash[0], e = hash[4];
-
-      const t1 = (hash[7]
-        + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25))
-        + ((e & hash[5]) ^ ((~e) & hash[6]))
-        + k[i]
-        + (w[i] = (i < 16) ? w[i] : (
-            w[i - 16]
-            + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3))
-            + w[i - 7]
-            + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))
-          ) | 0)
-      ) | 0;
-
-      const t2 = ((rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22))
-        + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]))
-      ) | 0;
-
-      hash.unshift((t1 + t2) | 0);
-      hash[4] = (hash[4] + t1) | 0;
-      hash.pop();
-    }
-
-    for (let i = 0; i < 8; i++) hash[i] = (hash[i] + old[i]) | 0;
-  }
-
-  const out = new Uint8Array(32);
-  for (let i = 0; i < 8; i++){
-    out[i*4+0] = (hash[i] >>> 24) & 0xff;
-    out[i*4+1] = (hash[i] >>> 16) & 0xff;
-    out[i*4+2] = (hash[i] >>> 8) & 0xff;
-    out[i*4+3] = (hash[i] >>> 0) & 0xff;
-  }
-  return out;
-}
-function codeChallengeFromVerifier(verifier){
-  return base64urlFromBytes(sha256Sync(verifier));
-}
-
-/* ===========================
-   PKCE STORE
-=========================== */
-function pkceSave(payload){
-  try{ window.name = "SEQODS_PKCE::" + JSON.stringify(payload); }catch{}
-  try{ localStorage.setItem(LS_PKCE, JSON.stringify(payload)); }catch{}
-}
-function pkceLoad(){
-  try{
-    if(typeof window.name === "string" && window.name.startsWith("SEQODS_PKCE::")){
-      return JSON.parse(window.name.slice("SEQODS_PKCE::".length));
-    }
-  }catch{}
-  try{ return JSON.parse(localStorage.getItem(LS_PKCE)||"null"); }catch{ return null; }
-}
-function pkceClear(){
-  try{ if(typeof window.name==="string" && window.name.startsWith("SEQODS_PKCE::")) window.name=""; }catch{}
-  try{ localStorage.removeItem(LS_PKCE); }catch{}
-}
-
-/* ===========================
-   OAUTH
-=========================== */
-function oauthStart(){
-  const redirectUri = currentRedirectUri();
-  const verifier = randomVerifier(64);
-  const challenge = codeChallengeFromVerifier(verifier);
-
-  pkceSave({ verifier, redirectUri, ts: Date.now() });
-
-  const params = new URLSearchParams({
-    response_type: "code",
-    client_id: DROPBOX_APP_KEY,
-    redirect_uri: redirectUri,
-    code_challenge: challenge,
-    code_challenge_method: "S256",
-    token_access_type: "offline",
-    scope: "files.content.read files.content.write"
-  });
-
-  window.location.href = "https://www.dropbox.com/oauth2/authorize?" + params.toString();
-}
-
-async function oauthHandleRedirectIfNeeded(){
-  const url = new URL(window.location.href);
-  const code = url.searchParams.get("code");
-  if(!code) return false;
-
-  const pk = pkceLoad();
-  pkceClear();
-
-  if(!pk || !pk.verifier || !pk.redirectUri){
-    setMessage("Erreur OAuth Dropbox : PKCE introuvable après retour.", "err");
-    return false;
-  }
-
-  const body = new URLSearchParams({
-    code,
-    grant_type: "authorization_code",
-    client_id: DROPBOX_APP_KEY,
-    redirect_uri: pk.redirectUri,
-    code_verifier: pk.verifier
-  });
-
-  const r = await fetch("https://api.dropboxapi.com/oauth2/token",{
-    method:"POST",
-    headers:{ "Content-Type":"application/x-www-form-urlencoded" },
-    body: body.toString()
-  });
-
-  if(!r.ok){
-    let details="";
-    try{ details = await r.text(); }catch{}
-    console.error("Dropbox /token error", r.status, details);
-    setMessage("Erreur OAuth Dropbox : " + (details || ("HTTP "+r.status)), "err");
-    return false;
-  }
-
-  const tok = await r.json();
-  const expiresAt = Date.now() + (tok.expires_in ? tok.expires_in*1000 : 3600000);
-
-  saveTokens({
-    access_token: tok.access_token,
-    refresh_token: tok.refresh_token,
-    expires_at: expiresAt
-  });
-
-  url.searchParams.delete("code");
-  url.searchParams.delete("state");
-  window.history.replaceState({}, "", url.toString());
-
-  setMessage("Dropbox connecté.", "ok");
-  return true;
-}
-
-async function refreshAccessTokenIfNeeded(){
-  const t = loadTokens();
-  if(hasValidAccessToken(t)) return t;
-  if(!t || !t.refresh_token) return null;
-
-  const body = new URLSearchParams({
-    grant_type: "refresh_token",
-    refresh_token: t.refresh_token,
-    client_id: DROPBOX_APP_KEY
-  });
-
-  const r = await fetch("https://api.dropboxapi.com/oauth2/token",{
-    method:"POST",
-    headers:{ "Content-Type":"application/x-www-form-urlencoded" },
-    body: body.toString()
-  });
-
-  if(!r.ok) return null;
-
-  const tok = await r.json();
-  const expiresAt = Date.now() + (tok.expires_in ? tok.expires_in*1000 : 3600000);
-
-  const merged = {
-    access_token: tok.access_token,
-    refresh_token: t.refresh_token,
-    expires_at: expiresAt
-  };
-  saveTokens(merged);
-  return merged;
-}
-
-/* ===========================
-   DROPBOX FILES API
-=========================== */
-async function dbxDownloadJson(path){
-  const t = await refreshAccessTokenIfNeeded();
-  if(!t) return { ok:false, err:"not_connected" };
-
-  const r = await fetch("https://content.dropboxapi.com/2/files/download",{
-    method:"POST",
-    headers:{
-      "Authorization": "Bearer " + t.access_token,
-      "Dropbox-API-Arg": JSON.stringify({ path })
-    }
-  });
-
-  if(r.status === 409) return { ok:false, err:"not_found" };
-  if(!r.ok) return { ok:false, err:"download_failed" };
-
-  let rev=null;
-  try{
-    const meta = JSON.parse(r.headers.get("Dropbox-API-Result") || "null");
-    rev = meta && meta.rev ? meta.rev : null;
-  }catch{}
-
-  const text = await r.text();
-  try{
-    return { ok:true, data: JSON.parse(text), rev };
-  }catch{
-    return { ok:false, err:"bad_json" };
-  }
-}
-
-async function dbxUploadJson(path, obj, rev){
-  const t = await refreshAccessTokenIfNeeded();
-  if(!t) return { ok:false, err:"not_connected" };
-
-  const mode = rev ? { ".tag":"update", "update": rev } : { ".tag":"overwrite" };
-  const content = JSON.stringify(obj);
-
-  const r = await fetch("https://content.dropboxapi.com/2/files/upload",{
-    method:"POST",
-    headers:{
-      "Authorization":"Bearer " + t.access_token,
-      "Content-Type":"application/octet-stream",
-      "Dropbox-API-Arg": JSON.stringify({
-        path,
-        mode,
-        autorename:false,
-        mute:true,
-        strict_conflict:true
-      })
-    },
-    body: content
-  });
-
-  if(!r.ok) return { ok:false, err: r.status===409 ? "conflict" : "upload_failed" };
-
-  let meta=null;
-  try{ meta = await r.json(); }catch{}
-  return { ok:true, rev: meta && meta.rev ? meta.rev : null };
-}
-
-async function dbxCreateFolder(path){
-  const t = await refreshAccessTokenIfNeeded();
-  if(!t) return { ok:false, err:"not_connected" };
-
-  const r = await fetch("https://api.dropboxapi.com/2/files/create_folder_v2",{
-    method:"POST",
-    headers:{
-      "Authorization":"Bearer " + t.access_token,
-      "Content-Type":"application/json"
-    },
-    body: JSON.stringify({ path, autorename: false })
-  });
-
-  if(r.ok) return { ok:true };
-  if(r.status === 409) return { ok:true };
-  return { ok:false, err:"create_folder_failed" };
-}
-
-async function dbxUploadText(path, text){
-  const t = await refreshAccessTokenIfNeeded();
-  if(!t) return { ok:false, err:"not_connected" };
-
-  const r = await fetch("https://content.dropboxapi.com/2/files/upload",{
-    method:"POST",
-    headers:{
-      "Authorization":"Bearer " + t.access_token,
-      "Content-Type":"application/octet-stream",
-      "Dropbox-API-Arg": JSON.stringify({
-        path,
-        mode: { ".tag":"add" },
-        autorename: false,
-        mute: true,
-        strict_conflict: true
-      })
-    },
-    body: text
-  });
-
-  if(r.ok) return { ok:true };
-  if(r.status === 409) return { ok:true };
-  return { ok:false, err:"upload_text_failed" };
-}
-
-/* ===========================
    DATA
 =========================== */
 const DATA = window.SEQODS_DATA;
@@ -516,6 +422,7 @@ let syncTimer = null;
 let DICT = new Set();  // sera rempli avec D (ODS9 complet) au démarrage
 
 /* ===========================
+
    HELPERS UI / SYNC
 =========================== */
 function scheduleSync(delay = 250){
@@ -528,6 +435,7 @@ function scheduleSync(delay = 250){
 function moveNewButtonForMobile(){ /* bouton Nouveau supprimé */ }
 
 /* ===========================
+
    DEFINITIONS / ANAGRAMMES
 =========================== */
 function openDef(defText, titleWord, canonForAnagrams, showAnagrams){
@@ -587,6 +495,7 @@ function closeDef(){
 }
 
 /* ===========================
+
    PROGRESSION UI
 =========================== */
 function computeStats(){
@@ -606,77 +515,7 @@ function computeStats(){
 }
 
 /* ===========================
-   ARCHIVAGE DROPBOX
-=========================== */
-function buildArchiveText(seqIndex, num){
-  const s = sequences[seqIndex];
-  if(!s) return "";
 
-  const borneA = E[s.startIdx] || "";
-  const borneB = E[s.endIdx] || "";
-  const date = todayStr();
-
-  const lines = [];
-  lines.push(`Fiche ${pad4(num)}`);
-  lines.push(`Date : ${date}`);
-  lines.push("");
-  lines.push(`Borne A : ${borneA}`);
-  lines.push(`Borne B : ${borneB}`);
-  lines.push("");
-  lines.push("Solutions :");
-  for(let i=s.startIdx+1, k=1; i<=s.startIdx+10; i++, k++){
-    lines.push(`${k}. ${E[i] || ""}`);
-  }
-  lines.push("");
-  lines.push("—");
-  return lines.join("\n");
-}
-
-async function ensureArchiveForSeq(seqIndex){
-  const key = String(seqIndex);
-  if(!state.archiveBySeq) state.archiveBySeq = {};
-
-  let entry = state.archiveBySeq[key];
-  if(!entry){
-    entry = { num: state.archiveNext || 1, uploaded: false };
-    state.archiveNext = (entry.num || 1) + 1;
-    state.archiveBySeq[key] = entry;
-    state.updatedAt = Date.now();
-    saveLocal(state);
-  }
-
-  if(entry.uploaded) return true;
-
-  const folder = await dbxCreateFolder(DROPBOX_ARCHIVE_DIR);
-  if(!folder.ok) return false;
-
-  const text = buildArchiveText(seqIndex, entry.num);
-  const filePath = `${DROPBOX_ARCHIVE_DIR}/${pad4(entry.num)}.txt`;
-  const up = await dbxUploadText(filePath, text);
-
-  if(up.ok){
-    entry.uploaded = true;
-    state.archiveBySeq[key] = entry;
-    state.updatedAt = Date.now();
-    saveLocal(state);
-    return true;
-  }
-  return false;
-}
-
-async function syncPendingArchives(){
-  const t = await refreshAccessTokenIfNeeded();
-  if(!t) return;
-
-  for(let i=0;i<TOTAL;i++){
-    const ls = ensureListState(state, i);
-    if(ls.seen){
-      await ensureArchiveForSeq(i);
-    }
-  }
-}
-
-/* ===========================
    CURRENT RUN SAVE/RESTORE
 =========================== */
 function saveCurrentRun(){
@@ -732,6 +571,7 @@ function restoreCurrentRunIfAny(){
 }
 
 /* ===========================
+
    PICK / REVIEW POLICY
 =========================== */
 function getDueReviewIndexes(){
@@ -801,6 +641,7 @@ function pickAccordingPolicy(forcePlainNew=false){
 }
 
 /* ===========================
+
    RENDER
 =========================== */
 function renderBounds(){
@@ -1019,296 +860,7 @@ function switchToRejouer(){ solutionsShown=true; updateSolutionsBtn(); }
 function resetSolutionsBtn(){ solutionsShown=false; updateSolutionsBtn(); }
 
 /* ===========================
-   PERSISTENCE
-=========================== */
-async function persistState(){
-  saveLocal(state);
 
-  const t = await refreshAccessTokenIfNeeded();
-  if(!t) return;
-
-  await syncPendingArchives();
-
-  // Si on n'a pas de rev locale, on télécharge d'abord pour éviter d'écraser
-  // un state existant sur Dropbox (ex: nouvel appareil / PWA fraîche)
-  if(!state.dbxRev){
-    const remote = await dbxDownloadJson(userStatePath());
-    if(remote.ok){
-      const remoteState = mergeDefaults(remote.data);
-      const chooseRemote = (remoteState.updatedAt||0) >= (state.updatedAt||0);
-      state = chooseRemote ? remoteState : state;
-      state.dbxRev = remote.rev || null;
-      saveLocal(state);
-      computeStats();
-      if(chooseRemote) return; // on a récupéré le bon state, pas besoin d'uploader
-    }
-  }
-
-  const res = await dbxUploadJson(userStatePath(), state, state.dbxRev);
-
-  if(res.ok){
-    state.dbxRev = res.rev || state.dbxRev;
-    state.updatedAt = Date.now();
-    saveLocal(state);
-    return;
-  }
-
-  if(res.err==="conflict"){
-    const remote = await dbxDownloadJson(userStatePath());
-    if(remote.ok){
-      const remoteState = mergeDefaults(remote.data);
-      const chooseRemote = (remoteState.updatedAt||0) >= (state.updatedAt||0);
-      state = chooseRemote ? remoteState : state;
-      state.dbxRev = remote.rev || state.dbxRev || null;
-
-      const res2 = await dbxUploadJson(userStatePath(), state, state.dbxRev);
-      if(res2.ok){
-        state.dbxRev = res2.rev || state.dbxRev;
-        saveLocal(state);
-        return;
-      }
-    }
-    setMessage("Conflit Dropbox : réessaie.", "warn");
-    return;
-  }
-
-  setMessage("Synchro Dropbox : échec.", "warn");
-}
-
-async function loadStatePreferDropbox(){
-  state = loadLocal();
-  computeStats();
-
-  const t = await refreshAccessTokenIfNeeded();
-  if(!t) return;
-
-  const remote = await dbxDownloadJson(userStatePath());
-  if(remote.ok){
-    const remoteState = mergeDefaults(remote.data);
-    const chooseRemote = (remoteState.updatedAt||0) >= (state.updatedAt||0);
-    state = chooseRemote ? remoteState : state;
-    state.dbxRev = remote.rev || state.dbxRev || null;
-    saveLocal(state);
-    computeStats();
-    return;
-  }
-
-  if(remote.err==="not_found"){
-    // Nouveau fichier utilisateur : on part de zero (pas de fallback sur ancien state.json)
-    state = defaultState();
-    saveLocal(state);
-    computeStats();
-  }
-}
-
-/* ===========================
-   CHRONO (local uniquement)
-=========================== */
-let chronoInterval = null;
-let chronoElapsed  = 0;
-
-function chronoFormat(s){
-  const m = Math.floor(s/60), sec = s%60;
-  return String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0");
-}
-function chronoUpdate(){
-  const el=$("#chronoDisplay"); if(el) el.textContent=chronoFormat(chronoElapsed);
-}
-function chronoStart(){
-  chronoStop(); chronoElapsed=0; chronoUpdate();
-  chronoInterval=setInterval(()=>{ chronoElapsed++; chronoUpdate(); },1000);
-}
-function chronoStop(){
-  if(chronoInterval){ clearInterval(chronoInterval); chronoInterval=null; }
-}
-
-
-/* ===========================
-   AUTH : USERS DROPBOX
-=========================== */
-async function loadUsers(){
-  const t = await refreshAccessTokenIfNeeded();
-  if(!t) return null;
-  const res = await dbxDownloadJson(DBX_USERS);
-  if(res.ok) return { data: res.data || {users:[]}, rev: res.rev };
-  if(res.err === "not_found") return { data: {users:[]}, rev: null };
-  return null;
-}
-
-async function saveUsers(usersObj, rev){
-  await dbxUploadJson(DBX_USERS, usersObj, rev);
-}
-
-async function verifySessionToken(pseudo, token){
-  const t = await refreshAccessTokenIfNeeded();
-  if(!t) return false;
-  const res = await loadUsers();
-  if(!res) return false;
-  const user = (res.data.users||[]).find(u=>u.pseudo===pseudo);
-  if(!user) return false;
-  return user.sessionToken === token;
-}
-
-async function authLogin(pseudo, password){
-  const res = await loadUsers();
-  if(!res) return {ok:false, err:"Impossible de contacter Dropbox."};
-  const hash = await sha256(password);
-  const user = (res.data.users||[]).find(u=>u.pseudo===pseudo);
-  if(!user) return {ok:false, err:"Utilisateur inconnu."};
-  if(user.passwordHash !== hash) return {ok:false, err:"Mot de passe incorrect."};
-  // Générer nouveau token de session (invalide les autres appareils)
-  const token = randomToken();
-  user.sessionToken = token;
-  await saveUsers(res.data, res.rev);
-  return {ok:true, token};
-}
-
-async function authRegister(pseudo, password, question, answer){
-  if(!pseudo || pseudo.length < 2) return {ok:false, err:"Pseudo trop court (min 2 caractères)."};
-  if(!password || password.length < 4) return {ok:false, err:"Mot de passe trop court (min 4 caractères)."};
-  const res = await loadUsers();
-  if(!res) return {ok:false, err:"Impossible de contacter Dropbox."};
-  const exists = (res.data.users||[]).find(u=>u.pseudo.toLowerCase()===pseudo.toLowerCase());
-  if(exists) return {ok:false, err:"Ce pseudo est déjà pris."};
-  const hash = await sha256(password);
-  const ansHash = await sha256(answer.toLowerCase().trim());
-  const token = randomToken();
-  res.data.users = res.data.users || [];
-  res.data.users.push({ pseudo, passwordHash:hash, question, answerHash:ansHash, sessionToken:token });
-  await saveUsers(res.data, res.rev);
-  return {ok:true, token};
-}
-
-async function authRecover(pseudo, answer, newPassword){
-  const res = await loadUsers();
-  if(!res) return {ok:false, err:"Impossible de contacter Dropbox."};
-  const user = (res.data.users||[]).find(u=>u.pseudo===pseudo);
-  if(!user) return {ok:false, err:"Utilisateur inconnu."};
-  const ansHash = await sha256(answer.toLowerCase().trim());
-  if(user.answerHash !== ansHash) return {ok:false, err:"Réponse incorrecte."};
-  user.passwordHash = await sha256(newPassword);
-  user.sessionToken = randomToken();
-  await saveUsers(res.data, res.rev);
-  return {ok:true};
-}
-
-/* ===========================
-   AUTH UI
-=========================== */
-function showAuthScreen(){
-  const game=$("#gameScreen"), auth=$("#authScreen");
-  if(game) game.style.display="none";
-  if(auth) auth.style.display="flex";
-  setAuthView("login");
-}
-
-function showGameScreen(){
-  const game=$("#gameScreen"), auth=$("#authScreen");
-  if(auth) auth.style.display="none";
-  if(game) game.style.display="";
-}
-
-function setAuthView(view){
-  ["login","register","recover"].forEach(v=>{
-    const el=$("#auth_"+v); if(el) el.style.display=(v===view)?"block":"none";
-  });
-  const err=$("#authErr"); if(err) err.textContent="";
-}
-
-function authSetLoading(loading){
-  ["btnLogin","btnRegister","btnDoRecover"].forEach(id=>{
-    const el=$("#"+id); if(el) el.disabled=loading;
-  });
-}
-
-function updateUserChip(){
-  const el=$("#userChip");
-  if(el && currentUser) el.textContent=currentUser.pseudo;
-}
-
-function wireAuth(){
-  // Login
-  const btnLogin=$("#btnLogin");
-  if(btnLogin) btnLogin.addEventListener("click", async ()=>{
-    const pseudo=($("#authPseudo")?.value||"").trim();
-    const pass=$("#authPass")?.value||"";
-    if(!pseudo||!pass){ showAuthErr("Remplis tous les champs."); return; }
-    authSetLoading(true);
-    const res = await authLogin(pseudo, pass);
-    authSetLoading(false);
-    if(!res.ok){ showAuthErr(res.err); return; }
-    currentUser={pseudo, token:res.token};
-    saveSession(currentUser);
-    showGameScreen();
-    state = defaultState(); state.dbxRev = null; // reset pour ne pas confondre avec l'ancien state.json
-    await loadStatePreferDropbox();
-    updateUserChip();
-    showWaitScreen();
-    setInterval(()=>{ persistState().catch(()=>{}); }, 60000);
-  });
-
-  // Création de compte
-  const btnRegister=$("#btnRegister");
-  if(btnRegister) btnRegister.addEventListener("click", async ()=>{
-    const pseudo=($("#regPseudo")?.value||"").trim();
-    const pass=$("#regPass")?.value||"";
-    const q=($("#regQuestion")?.value||"").trim();
-    const a=($("#regAnswer")?.value||"").trim();
-    if(!pseudo||!pass||!q||!a){ showAuthErr("Remplis tous les champs."); return; }
-    authSetLoading(true);
-    const res = await authRegister(pseudo, pass, q, a);
-    authSetLoading(false);
-    if(!res.ok){ showAuthErr(res.err); return; }
-    currentUser={pseudo, token:res.token};
-    saveSession(currentUser);
-    showGameScreen();
-    state = defaultState(); state.dbxRev = null; // reset pour ne pas confondre avec l'ancien state.json
-    await loadStatePreferDropbox();
-    updateUserChip();
-    showWaitScreen();
-    setInterval(()=>{ persistState().catch(()=>{}); }, 60000);
-  });
-
-  // Récupération mot de passe
-  const btnDoRecover=$("#btnDoRecover");
-  if(btnDoRecover) btnDoRecover.addEventListener("click", async ()=>{
-    const pseudo=($("#recPseudo")?.value||"").trim();
-    const answer=($("#recAnswer")?.value||"").trim();
-    const newPass=$("#recNewPass")?.value||"";
-    if(!pseudo||!answer||!newPass){ showAuthErr("Remplis tous les champs."); return; }
-    if(newPass.length<4){ showAuthErr("Nouveau mot de passe trop court."); return; }
-    authSetLoading(true);
-    const res = await authRecover(pseudo, answer, newPass);
-    authSetLoading(false);
-    if(!res.ok){ showAuthErr(res.err); return; }
-    showAuthErr("Mot de passe modifié ! Tu peux te connecter.", true);
-    setAuthView("login");
-  });
-
-  // Liens entre vues
-  const toReg=$("#toRegister"); if(toReg) toReg.addEventListener("click",()=>setAuthView("register"));
-  const toLog=$("#toLogin"); if(toLog) toLog.addEventListener("click",()=>setAuthView("login"));
-  const toRec=$("#toRecover"); if(toRec) toRec.addEventListener("click",()=>setAuthView("recover"));
-  const toLog2=$("#toLogin2"); if(toLog2) toLog2.addEventListener("click",()=>setAuthView("login"));
-
-  // Enter dans les champs
-  ["authPass","regAnswer","recNewPass"].forEach(id=>{
-    const el=$("#"+id);
-    if(el) el.addEventListener("keydown",(e)=>{
-      if(e.key==="Enter"){
-        if(id==="authPass") $("#btnLogin")?.click();
-        else if(id==="regAnswer") $("#btnRegister")?.click();
-        else if(id==="recNewPass") $("#btnDoRecover")?.click();
-      }
-    });
-  });
-}
-
-function showAuthErr(msg, isOk=false){
-  const el=$("#authErr");
-  if(el){ el.textContent=msg; el.className=isOk?"msg ok":"msg err"; }
-}
-/* ===========================
    WIRE
 =========================== */
 function wire(){
@@ -1334,12 +886,16 @@ function wire(){
     }
   });
 
-
-
-  const btnLogout=$("#btnLogout");
-  if(btnLogout) btnLogout.addEventListener("click", ()=>{
-    clearSession();
-    showAuthScreen();
+  const btnD=$("#btnDropbox");
+  if(btnD) btnD.addEventListener("click", async ()=>{
+    const t = loadTokens();
+    if(t && (t.refresh_token || hasValidAccessToken(t))){
+      setMessage("Synchronisation…", "");
+      await persistState();
+      setMessage("Synchronisation terminée.", "ok");
+      return;
+    }
+    oauthStart();
   });
 
   const list=$("#liste");
@@ -1384,6 +940,9 @@ function wire(){
   if(defBackdrop) defBackdrop.addEventListener("click", closeDef);
   document.addEventListener("keydown",(e)=>{ if(e.key==="Escape") closeDef(); });
 
+  const btnLogout=$("#btnLogout");
+  if(btnLogout) btnLogout.addEventListener("click",()=>{ clearSession(); showAuthScreen(); });
+
   moveNewButtonForMobile();
   window.addEventListener("resize", moveNewButtonForMobile);
   window.addEventListener("orientationchange", moveNewButtonForMobile);
@@ -1402,59 +961,34 @@ function renderAll(){
 }
 
 /* ===========================
+
    START
 =========================== */
 async function start(){
-  DICT = D.length > 0
-    ? new Set(D.map(w => normalizeWord(w)))
-    : new Set(C.map(w => normalizeWord(w)));
+  DICT = D.length>0 ? new Set(D.map(w=>normalizeWord(w))) : new Set(C.map(w=>normalizeWord(w)));
   wire();
   moveNewButtonForMobile();
-
-  await oauthHandleRedirectIfNeeded();
 
   // Vérifier session sauvegardée
   const saved = loadSession();
   if(saved && saved.pseudo && saved.token){
-    // Vérifier que le token est toujours valide sur Dropbox
     const valid = await verifySessionToken(saved.pseudo, saved.token);
     if(valid){
       currentUser = saved;
       showGameScreen();
       state = defaultState();
-      await loadStatePreferDropbox();
+      await loadStateFromFirebase();
       updateUserChip();
-      showWaitScreen();
+      if(restoreCurrentRunIfAny()){ renderAll(); }
+      else{ showWaitScreen(); }
+      setInterval(()=>{ persistState().catch(()=>{}); }, 60000);
       return;
     }
   }
-
   showAuthScreen();
-  setInterval(()=>{ persistState().catch(()=>{}); }, 60000);
-}
-
-function showWaitScreen(){
-  chronoStop();
-  // Réinitialiser l'état de jeu visible sans charger de liste
-  seq = null;
-  targets = [];
-  found = new Set();
-  hintMode = Array(10).fill("none");
-  solutionsShown = false;
-  const c=$("#compteur"); if(c) c.textContent="0/10";
-  const borneA=$("#borneA"), borneB=$("#borneB");
-  if(borneA){ borneA.textContent="—"; borneA.onclick=null; }
-  if(borneB){ borneB.textContent="—"; borneB.onclick=null; }
-  const list=$("#liste"); if(list) list.innerHTML="";
-  const msg=$("#msg"); if(msg){ msg.textContent="Prêt à jouer !"; msg.className="msg ok"; }
-  // Forcer le bouton en mode "Jouer" (après tout le reste)
-  const btnS=$("#btnSolutions");
-  if(btnS){
-    btnS.textContent="Jouer";
-    btnS.dataset.mode="rejouer";
-    btnS.classList.remove("btnDanger");
-  }
 }
 
 document.addEventListener("DOMContentLoaded", start);
+})();
+
 })();
