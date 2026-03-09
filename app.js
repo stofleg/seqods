@@ -1250,7 +1250,7 @@ function wireAuth(){
     currentUser={pseudo, token:res.token};
     saveSession(currentUser);
     showGameScreen();
-    state = defaultState(); // reset état local avant de charger depuis Dropbox
+    state = defaultState(); state.dbxRev = null; // reset pour ne pas confondre avec l'ancien state.json
     await loadStatePreferDropbox();
     updateUserChip();
     showWaitScreen();
@@ -1272,7 +1272,7 @@ function wireAuth(){
     currentUser={pseudo, token:res.token};
     saveSession(currentUser);
     showGameScreen();
-    state = defaultState(); // reset état local avant de charger depuis Dropbox
+    state = defaultState(); state.dbxRev = null; // reset pour ne pas confondre avec l'ancien state.json
     await loadStatePreferDropbox();
     updateUserChip();
     showWaitScreen();
