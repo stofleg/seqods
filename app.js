@@ -122,15 +122,15 @@ function mergeDefaults(obj){
   }
   return out;
 }
+function localKey(){
+  return currentUser ? STORE_LOCAL+"_"+currentUser.pseudo : STORE_LOCAL;
+}
 function loadLocal(){
-  try{
-    return mergeDefaults(JSON.parse(localStorage.getItem(STORE_LOCAL)||"null"));
-  }catch{
-    return defaultState();
-  }
+  try{ return mergeDefaults(JSON.parse(localStorage.getItem(localKey())||"null")); }
+  catch{ return defaultState(); }
 }
 function saveLocal(st){
-  try{ localStorage.setItem(STORE_LOCAL, JSON.stringify(st)); }catch{}
+  try{ localStorage.setItem(localKey(), JSON.stringify(st)); }catch{}
 }
 
 /* ===========================
@@ -1250,6 +1250,7 @@ function wireAuth(){
     currentUser={pseudo, token:res.token};
     saveSession(currentUser);
     showGameScreen();
+    state = defaultState(); // reset état local avant de charger depuis Dropbox
     await loadStatePreferDropbox();
     updateUserChip();
     showWaitScreen();
@@ -1271,6 +1272,7 @@ function wireAuth(){
     currentUser={pseudo, token:res.token};
     saveSession(currentUser);
     showGameScreen();
+    state = defaultState(); // reset état local avant de charger depuis Dropbox
     await loadStatePreferDropbox();
     updateUserChip();
     showWaitScreen();
@@ -1451,9 +1453,9 @@ async function start(){
     if(valid){
       currentUser = saved;
       showGameScreen();
+      state = defaultState();
       await loadStatePreferDropbox();
       updateUserChip();
-      // Ne pas lancer de partie directement — attendre "Jouer"
       showWaitScreen();
       return;
     }
@@ -1465,13 +1467,19 @@ async function start(){
 
 function showWaitScreen(){
   chronoStop();
+  // Réinitialiser l'état de jeu visible sans charger de liste
+  seq = null;
+  targets = [];
+  found = new Set();
+  hintMode = Array(10).fill("none");
+  solutionsShown = false;
   const c=$("#compteur"); if(c) c.textContent="0/10";
   const borneA=$("#borneA"), borneB=$("#borneB");
-  if(borneA) borneA.textContent="—";
-  if(borneB) borneB.textContent="—";
+  if(borneA){ borneA.textContent="—"; borneA.onclick=null; }
+  if(borneB){ borneB.textContent="—"; borneB.onclick=null; }
   const list=$("#liste"); if(list) list.innerHTML="";
   const msg=$("#msg"); if(msg){ msg.textContent="Prêt à jouer !"; msg.className="msg ok"; }
-  // Forcer le bouton en mode "Jouer"
+  // Forcer le bouton en mode "Jouer" (après tout le reste)
   const btnS=$("#btnSolutions");
   if(btnS){
     btnS.textContent="Jouer";
