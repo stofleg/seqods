@@ -244,15 +244,14 @@ function updateUserChip(){
 
 function showWaitScreen(){
   chronoStop();
-  seq=null; targets=[]; found=new Set(); hintMode=Array(10).fill("none"); solutionsShown=false;
+  seq=null; targets=[]; found=new Set(); hintMode=Array(10).fill("none"); solutionsShown=true;
   const c=$("#compteur"); if(c) c.textContent="0/10";
   const borneA=$("#borneA"), borneB=$("#borneB");
   if(borneA){ borneA.textContent="—"; borneA.onclick=null; }
   if(borneB){ borneB.textContent="—"; borneB.onclick=null; }
   const list=$("#liste"); if(list) list.innerHTML="";
   const msg=$("#msg"); if(msg){ msg.textContent="Prêt à jouer !"; msg.className="msg ok"; }
-  const btnS=$("#btnSolutions");
-  if(btnS){ btnS.textContent="Jouer"; btnS.dataset.mode="rejouer"; btnS.classList.remove("btnDanger"); }
+  updateSolutionsBtn();
 }
 
 function wireAuth(){
@@ -853,7 +852,7 @@ function validateWord(raw){
   updateCounter();
 }
 
-let solutionsShown = false;
+let solutionsShown = true; // démarre en mode "Jouer"
 
 function showSolutions(){
   markAidUsed();
