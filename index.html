@@ -531,47 +531,30 @@
     }
 
     #authScreen{
-      position:fixed; inset:0; z-index:100;
-      display:flex; align-items:center; justify-content:center;
-      background: radial-gradient(1200px 900px at 20% 0%, rgba(47,125,246,.20), transparent 50%),
-        radial-gradient(900px 700px at 90% 20%, rgba(56,198,198,.16), transparent 55%),
-        linear-gradient(180deg, var(--bg0), var(--bg1));
+      position:fixed;inset:0;z-index:100;
+      display:flex;align-items:center;justify-content:center;
+      background:radial-gradient(1200px 900px at 20% 0%,rgba(47,125,246,.20),transparent 50%),
+        radial-gradient(900px 700px at 90% 20%,rgba(56,198,198,.16),transparent 55%),
+        linear-gradient(180deg,var(--bg0),var(--bg1));
     }
     .authCard{
-      background:var(--card);
-      border:1px solid var(--stroke);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      backdrop-filter:blur(12px);
-      -webkit-backdrop-filter:blur(12px);
-      padding:24px 20px;
-      width:100%; max-width:360px;
-      margin:16px;
+      background:var(--card);border:1px solid var(--stroke);border-radius:var(--radius);
+      box-shadow:var(--shadow);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+      padding:24px 20px;width:100%;max-width:360px;margin:16px;
     }
-    .authCard h2{ margin:0 0 18px; font-size:20px; font-weight:900; }
-    .authField{
-      display:flex; flex-direction:column; gap:6px; margin-bottom:14px;
-    }
-    .authField label{ font-size:13px; font-weight:700; color:var(--muted); }
+    .authCard h2{margin:0 0 18px;font-size:20px;font-weight:900;}
+    .authField{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+    .authField label{font-size:13px;font-weight:700;color:var(--muted);}
     .authField input{
-      padding:10px 12px; border-radius:12px;
-      border:1px solid var(--stroke);
-      background:rgba(255,255,255,.70);
-      color:var(--txt); font-size:15px; outline:none;
-      box-shadow:var(--shadow2);
+      padding:10px 12px;border-radius:12px;border:1px solid var(--stroke);
+      background:rgba(255,255,255,.70);color:var(--txt);font-size:15px;
+      outline:none;box-shadow:var(--shadow2);
     }
-    @media(prefers-color-scheme:dark){
-      .authField input{ background:rgba(18,24,44,.78); }
-    }
-    .authField input:focus{ box-shadow:0 0 0 4px var(--focus),var(--shadow2); }
-    .authLink{
-      background:none; border:none; color:var(--accent);
-      font-size:13px; cursor:pointer; padding:0; text-decoration:underline;
-    }
-    .authLinks{ margin-top:14px; display:flex; gap:14px; flex-wrap:wrap; }
-    #authErr{ min-height:18px; font-size:13px; font-weight:700; margin-top:10px; }
-    .chronoExpired{ color:var(--danger) !important; animation:chronoPulse 1s ease-in-out infinite; }
-    @keyframes chronoPulse{ 0%,100%{opacity:1;} 50%{opacity:.45;} }
+    @media(prefers-color-scheme:dark){.authField input{background:rgba(18,24,44,.78);}}
+    .authField input:focus{box-shadow:0 0 0 4px var(--focus),var(--shadow2);}
+    .authLink{background:none;border:none;color:var(--accent);font-size:13px;cursor:pointer;padding:0;text-decoration:underline;}
+    .authLinks{margin-top:14px;display:flex;gap:14px;flex-wrap:wrap;}
+    #authErr{min-height:18px;font-size:13px;font-weight:700;margin-top:10px;}
   </style>
 </head>
 <body>
@@ -587,7 +570,9 @@
         <div class="rightCol">
           <div class="chipRow">
             <div class="chip">Progression&nbsp;: <strong id="compteur">0/10</strong></div>
-            <span id="userChip" style="font-size:13px; font-weight:700; color:var(--accent);"></span><button id="btnLogout" class="btn" type="button" title="Déconnexion" style="padding:6px 10px;">⏏</button>
+            <span id="userChip" style="font-size:13px;font-weight:700;color:var(--accent);"></span>
+            <button id="btnLogout" class="btn" type="button" title="Déconnexion" style="padding:6px 10px;">⏏</button>
+            <button id="btnDropbox" class="btn" type="button">Connexion Dropbox</button>
           </div>
 
           <div class="progressWrap">
@@ -653,48 +638,42 @@
   </div>
   </div>
 
-  <!-- ÉCRAN AUTH -->
   <script>
-  // Injecter l'écran auth dans #authScreen après chargement
-  document.addEventListener("DOMContentLoaded", ()=>{
-    const el = document.querySelector("#authScreen");
+  document.addEventListener("DOMContentLoaded",()=>{
+    const el=document.querySelector("#authScreen");
     if(!el) return;
-    el.innerHTML = `
-      <div class="authCard">
-        <!-- LOGIN -->
-        <div id="auth_login">
-          <h2>SeqOds — Connexion</h2>
-          <div class="authField"><label>Pseudo</label><input id="authPseudo" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="ton pseudo"/></div>
-          <div class="authField"><label>Mot de passe</label><input id="authPass" type="password" autocomplete="current-password" placeholder="••••••"/></div>
-          <button id="btnLogin" class="btn" type="button" style="width:100%;justify-content:center;">Se connecter</button>
-          <div class="authLinks">
-            <button class="authLink" id="toRegister">Créer un compte</button>
-            <button class="authLink" id="toRecover">Mot de passe oublié</button>
-          </div>
-          <div id="authErr" class="msg"></div>
+    el.innerHTML=`<div class="authCard">
+      <div id="auth_login">
+        <h2>Odyssée — Connexion</h2>
+        <div class="authField"><label>Pseudo</label><input id="authPseudo" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="ton pseudo"/></div>
+        <div class="authField"><label>Mot de passe</label><input id="authPass" type="password" autocomplete="current-password" placeholder="••••••"/></div>
+        <button id="btnLogin" class="btn" type="button" style="width:100%;justify-content:center;">Se connecter</button>
+        <div class="authLinks">
+          <button class="authLink" id="toRegister">Créer un compte</button>
+          <button class="authLink" id="toRecover">Mot de passe oublié</button>
         </div>
-        <!-- REGISTER -->
-        <div id="auth_register" style="display:none;">
-          <h2>Créer un compte</h2>
-          <div class="authField"><label>Pseudo</label><input id="regPseudo" type="text" autocapitalize="none" spellcheck="false" placeholder="choisis un pseudo"/></div>
-          <div class="authField"><label>Mot de passe</label><input id="regPass" type="password" placeholder="min 4 caractères"/></div>
-          <div class="authField"><label>Question secrète</label><input id="regQuestion" type="text" placeholder="ex : ville natale ?"/></div>
-          <div class="authField"><label>Réponse</label><input id="regAnswer" type="text" autocapitalize="none" placeholder="ta réponse"/></div>
-          <button id="btnRegister" class="btn" type="button" style="width:100%;justify-content:center;">Créer le compte</button>
-          <div class="authLinks"><button class="authLink" id="toLogin">Déjà un compte ? Se connecter</button></div>
-          <div id="authErr" class="msg"></div>
-        </div>
-        <!-- RECOVER -->
-        <div id="auth_recover" style="display:none;">
-          <h2>Récupérer mon mot de passe</h2>
-          <div class="authField"><label>Pseudo</label><input id="recPseudo" type="text" autocapitalize="none" placeholder="ton pseudo"/></div>
-          <div class="authField"><label>Réponse à ta question secrète</label><input id="recAnswer" type="text" autocapitalize="none" placeholder="ta réponse"/></div>
-          <div class="authField"><label>Nouveau mot de passe</label><input id="recNewPass" type="password" placeholder="min 4 caractères"/></div>
-          <button id="btnDoRecover" class="btn" type="button" style="width:100%;justify-content:center;">Changer le mot de passe</button>
-          <div class="authLinks"><button class="authLink" id="toLogin2">Retour à la connexion</button></div>
-          <div id="authErr" class="msg"></div>
-        </div>
-      </div>`;
+        <div id="authErr" class="msg"></div>
+      </div>
+      <div id="auth_register" style="display:none;">
+        <h2>Créer un compte</h2>
+        <div class="authField"><label>Pseudo</label><input id="regPseudo" type="text" autocapitalize="none" spellcheck="false" placeholder="choisis un pseudo"/></div>
+        <div class="authField"><label>Mot de passe</label><input id="regPass" type="password" placeholder="min 4 caractères"/></div>
+        <div class="authField"><label>Question secrète</label><input id="regQuestion" type="text" placeholder="ex : ville natale ?"/></div>
+        <div class="authField"><label>Réponse</label><input id="regAnswer" type="text" autocapitalize="none" placeholder="ta réponse"/></div>
+        <button id="btnRegister" class="btn" type="button" style="width:100%;justify-content:center;">Créer le compte</button>
+        <div class="authLinks"><button class="authLink" id="toLogin">Déjà un compte ? Se connecter</button></div>
+        <div id="authErr" class="msg"></div>
+      </div>
+      <div id="auth_recover" style="display:none;">
+        <h2>Récupérer mon mot de passe</h2>
+        <div class="authField"><label>Pseudo</label><input id="recPseudo" type="text" autocapitalize="none" placeholder="ton pseudo"/></div>
+        <div class="authField"><label>Réponse à ta question secrète</label><input id="recAnswer" type="text" autocapitalize="none" placeholder="ta réponse"/></div>
+        <div class="authField"><label>Nouveau mot de passe</label><input id="recNewPass" type="password" placeholder="min 4 caractères"/></div>
+        <button id="btnDoRecover" class="btn" type="button" style="width:100%;justify-content:center;">Changer le mot de passe</button>
+        <div class="authLinks"><button class="authLink" id="toLogin2">Retour à la connexion</button></div>
+        <div id="authErr" class="msg"></div>
+      </div>
+    </div>`;
   });
   </script>
   <script src="data.js"></script>
