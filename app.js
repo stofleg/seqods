@@ -956,14 +956,25 @@ function chronoStop(){
 /* ===========================
    SETTINGS UI
 =========================== */
-function updateToggleUI(){
+function updateAllToggleUIs(){
+  // Chrono (bouton direct)
   const btn=$("#toggleChrono"), thumb=$("#toggleThumb"), row=$("#settingsDurationRow");
-  if(!btn) return;
-  const on=settings.chronoEnabled;
-  btn.style.background = on ? "var(--accent)" : "var(--muted)";
-  btn.setAttribute("aria-pressed", on);
-  if(thumb) thumb.style.transform = on ? "translateX(24px)" : "translateX(0)";
-  if(row) row.style.display = on ? "block" : "none";
+  if(btn){
+    btn.style.background=settings.chronoEnabled?"var(--accent)":"var(--muted)";
+    btn.setAttribute("aria-pressed",settings.chronoEnabled);
+  }
+  if(thumb) thumb.style.transform=settings.chronoEnabled?"translateX(24px)":"translateX(0)";
+  if(row) row.style.display=settings.chronoEnabled?"block":"none";
+  // Toggles indices
+  const hintMap=[["settingsHintAbc","hintAbc"],["settingsHintDef","hintDef"],["settingsHintLen","hintLen"]];
+  hintMap.forEach(([id,key])=>{
+    const chk=$("#"+id); if(!chk) return;
+    chk.checked=settings[key];
+    const track=chk.parentElement?.querySelector(".toggleTrackS");
+    const thumb2=chk.parentElement?.querySelector(".toggleThumbS");
+    if(track) track.style.background=settings[key]?"var(--accent)":"var(--muted)";
+    if(thumb2) thumb2.style.transform=settings[key]?"translateX(20px)":"translateX(0)";
+  });
 }
 
 function openSettings(){
@@ -971,29 +982,69 @@ function openSettings(){
   const slider=$("#settingsDuration"), lbl=$("#settingsDurationLabel");
   if(slider) slider.value=settings.chronoDuration;
   if(lbl) lbl.textContent=settings.chronoDuration+" min";
-  updateToggleUI();
+  updateAllToggleUIs();
   modal.classList.add("open");
 }
 function closeSettings(){
   const modal=$("#settingsModal"); if(modal) modal.classList.remove("open");
 }
+function wireToggle(trackClass, key, onChange){
+  // Wire tous les toggles CSS (label+checkbox) d'une classe
+  document.querySelectorAll("."+trackClass).forEach(track=>{
+    track.addEventListener("click",()=>{
+      const label=track.closest("label");
+      const chk=label ? label.querySelector("input[type=checkbox]") : null;
+      if(chk){ chk.checked=!chk.checked; }
+      settings[key]=!settings[key];
+      updateAllToggleUIs();
+      saveSettings();
+      if(onChange) onChange();
+    });
+  });
+}
 function wireSettings(){
   const btn=$("#btnSettings"); if(btn) btn.addEventListener("click", openSettings);
   const cls=$("#closeSettings"); if(cls) cls.addEventListener("click", closeSettings);
 
-  const toggle=$("#toggleChrono");
-  if(toggle) toggle.addEventListener("click",()=>{
+  // Toggle chrono (bouton direct)
+  const toggleChrono=$("#toggleChrono");
+  if(toggleChrono) toggleChrono.addEventListener("click",()=>{
     settings.chronoEnabled=!settings.chronoEnabled;
-    updateToggleUI();
+    updateAllToggleUIs();
     saveSettings();
     chronoUpdate();
   });
 
+  // Slider durée
   const slider=$("#settingsDuration"), lbl=$("#settingsDurationLabel");
   if(slider) slider.addEventListener("input",()=>{
     settings.chronoDuration=parseInt(slider.value);
     if(lbl) lbl.textContent=settings.chronoDuration+" min";
     saveSettings();
+  });
+
+  // Toggles indices (label+checkbox)
+  const hintMap = [
+    ["settingsHintAbc","hintAbc"],
+    ["settingsHintDef","hintDef"],
+    ["settingsHintLen","hintLen"]
+  ];
+  hintMap.forEach(([id,key])=>{
+    const chk=$("#"+id);
+    if(!chk) return;
+    // Clic sur le track visuel (frère du checkbox)
+    const track=chk.parentElement ? chk.parentElement.querySelector(".toggleTrackS") : null;
+    const thumb=chk.parentElement ? chk.parentElement.querySelector(".toggleThumbS") : null;
+    const clickHandler=()=>{
+      settings[key]=!settings[key];
+      chk.checked=settings[key];
+      if(track) track.style.background=settings[key]?"var(--accent)":"var(--muted)";
+      if(thumb) thumb.style.transform=settings[key]?"translateX(20px)":"translateX(0)";
+      saveSettings();
+      applyHintSettings();
+    };
+    if(track) track.addEventListener("click", clickHandler);
+    if(thumb) thumb.addEventListener("click", clickHandler);
   });
 
   const backdrop=$("#settingsBackdrop");
@@ -1108,6 +1159,7 @@ function renderAll(){
   computeStats();
   resetSolutionsBtn();
   chronoStart();
+  applyHintSettings();
 }
 
 /* ===========================
