@@ -240,6 +240,9 @@ function authSetLoading(loading){
 function updateUserChip(){
   const el=$("#userChip");
   if(el && currentUser) el.textContent=currentUser.pseudo;
+  // Mettre à jour le titre de l'écran auth aussi
+  const authTitle=document.querySelector("#auth_login h2");
+  if(authTitle) authTitle.textContent="METHODS — Connexion";
 }
 
 function showWaitScreen(){
@@ -250,7 +253,7 @@ function showWaitScreen(){
   if(borneA){ borneA.textContent="—"; borneA.onclick=null; }
   if(borneB){ borneB.textContent="—"; borneB.onclick=null; }
   const list=$("#liste"); if(list) list.innerHTML="";
-  const msg=$("#msg"); if(msg){ msg.textContent="Prêt à jouer !"; msg.className="msg ok"; }
+  const msg=$("#msg"); if(msg){ msg.textContent=""; msg.className="msg"; }
   updateSolutionsBtn();
 }
 
@@ -933,19 +936,18 @@ function chronoStop(){
    SETTINGS UI
 =========================== */
 function updateToggleUI(){
-  const chk=$("#settingsChronoEnabled");
-  const track=$("#toggleTrack"), thumb=$("#toggleThumb"), row=$("#settingsDurationRow");
-  if(!chk) return;
-  const on=chk.checked;
-  if(track) track.style.background=on?"var(--accent)":"var(--muted)";
-  if(thumb) thumb.style.transform=on?"translateX(20px)":"translateX(0)";
-  if(row) row.style.display=on?"flex":"none";
+  const btn=$("#toggleChrono"), thumb=$("#toggleThumb"), row=$("#settingsDurationRow");
+  if(!btn) return;
+  const on=settings.chronoEnabled;
+  btn.style.background = on ? "var(--accent)" : "var(--muted)";
+  btn.setAttribute("aria-pressed", on);
+  if(thumb) thumb.style.transform = on ? "translateX(24px)" : "translateX(0)";
+  if(row) row.style.display = on ? "block" : "none";
 }
 
 function openSettings(){
   const modal=$("#settingsModal"); if(!modal) return;
-  const chk=$("#settingsChronoEnabled"), slider=$("#settingsDuration"), lbl=$("#settingsDurationLabel");
-  if(chk) chk.checked=settings.chronoEnabled;
+  const slider=$("#settingsDuration"), lbl=$("#settingsDurationLabel");
   if(slider) slider.value=settings.chronoDuration;
   if(lbl) lbl.textContent=settings.chronoDuration+" min";
   updateToggleUI();
@@ -955,19 +957,12 @@ function closeSettings(){
   const modal=$("#settingsModal"); if(modal) modal.classList.remove("open");
 }
 function wireSettings(){
-  const btn=$("#btnSettings"); if(btn) btn.addEventListener("click",openSettings);
-  const cls=$("#closeSettings"); if(cls) cls.addEventListener("click",closeSettings);
+  const btn=$("#btnSettings"); if(btn) btn.addEventListener("click", openSettings);
+  const cls=$("#closeSettings"); if(cls) cls.addEventListener("click", closeSettings);
 
-  const chk=$("#settingsChronoEnabled");
-  const track=$("#toggleTrack"), thumb=$("#toggleThumb");
-  // Clic sur le toggle
-  [track, thumb].forEach(el=>{
-    if(el) el.addEventListener("click",()=>{
-      if(chk){ chk.checked=!chk.checked; chk.dispatchEvent(new Event("change")); }
-    });
-  });
-  if(chk) chk.addEventListener("change",()=>{
-    settings.chronoEnabled=chk.checked;
+  const toggle=$("#toggleChrono");
+  if(toggle) toggle.addEventListener("click",()=>{
+    settings.chronoEnabled=!settings.chronoEnabled;
     updateToggleUI();
     saveSettings();
     chronoUpdate();
@@ -980,7 +975,6 @@ function wireSettings(){
     saveSettings();
   });
 
-  // Fermer via backdrop
   const backdrop=$("#settingsBackdrop");
   if(backdrop) backdrop.addEventListener("click", closeSettings);
 }
