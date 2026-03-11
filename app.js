@@ -743,6 +743,21 @@ function wireAuth(){
     if(!r.ok){showAuthErr(r.err);return;}
     go(r.pseudo||p,r.token);
   });
+  // Vérification pseudo en temps réel
+  let pseudoCheckTimer=null;
+  $("#regPseudo")?.addEventListener("input", e=>{
+    const hint=$("#regPseudoHint"); if(!hint) return;
+    const val=e.target.value.trim();
+    clearTimeout(pseudoCheckTimer);
+    if(val.length<2){ hint.textContent=""; hint.className="pseudoHint"; return; }
+    hint.textContent="⏳ Vérification…"; hint.className="pseudoHint checking";
+    pseudoCheckTimer=setTimeout(async()=>{
+      const res=await fbGet("users",val.toLowerCase());
+      if(res.ok){ hint.textContent="✗ Ce pseudo est déjà pris"; hint.className="pseudoHint taken"; }
+      else{ hint.textContent="✓ Disponible"; hint.className="pseudoHint available"; }
+    },600);
+  });
+
   $("#btnRegister")?.addEventListener("click",async()=>{
     const p=($("#regPseudo")?.value||"").trim(),pw=$("#regPass")?.value||"",
           q=($("#regQuestion")?.value||"").trim(),a=($("#regAnswer")?.value||"").trim();
