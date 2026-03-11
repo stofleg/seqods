@@ -137,7 +137,7 @@ function saveLocal(st){
    AUTH FIREBASE
 =========================== */
 async function authLogin(pseudo, password){
-  const res = await fbGet("users", pseudo.toLowerCase());
+  const res = await fbGet("users", pseudo);
   if(res.err==="not_found") return {ok:false, err:"Utilisateur inconnu."};
   if(!res.ok) return {ok:false, err:"Impossible de contacter la base de données."};
   const hash = await sha256(password);
@@ -150,33 +150,33 @@ async function authLogin(pseudo, password){
 async function authRegister(pseudo, password, question, answer){
   if(!pseudo || pseudo.length < 2) return {ok:false, err:"Pseudo trop court (min 2 caractères)."};
   if(!password || password.length < 4) return {ok:false, err:"Mot de passe trop court (min 4 caractères)."};
-  const key = pseudo.toLowerCase();
+  const key = pseudo;
   const exists = await fbGet("users", key);
   if(exists.ok) return {ok:false, err:"Ce pseudo est déjà pris."};
   const hash = await sha256(password);
   const ansHash = await sha256(answer.toLowerCase().trim());
   const token = randomToken();
-  const res = await fbSet("users", key, {
+  const resSet = await fbSet("users", key, {
     pseudo, passwordHash:hash, question, answerHash:ansHash, sessionToken:token
   });
-  if(!res.ok) return {ok:false, err:"Erreur lors de la création du compte."};
+  if(!resSet.ok) return {ok:false, err:"Erreur lors de la création du compte."};
   return {ok:true, token};
 }
 
 async function authRecover(pseudo, answer, newPassword){
   if(!newPassword || newPassword.length < 4) return {ok:false, err:"Nouveau mot de passe trop court."};
-  const res = await fbGet("users", pseudo.toLowerCase());
+  const res = await fbGet("users", pseudo);
   if(res.err==="not_found") return {ok:false, err:"Utilisateur inconnu."};
   if(!res.ok) return {ok:false, err:"Impossible de contacter la base de données."};
   const ansHash = await sha256(answer.toLowerCase().trim());
   if(res.data.answerHash !== ansHash) return {ok:false, err:"Réponse incorrecte."};
   const newHash = await sha256(newPassword);
-  await fbSet("users", pseudo.toLowerCase(), {...res.data, passwordHash:newHash, sessionToken:randomToken()});
+  await fbSet("users", pseudo, {...res.data, passwordHash:newHash, sessionToken:randomToken()});
   return {ok:true};
 }
 
 async function verifySessionToken(pseudo, token){
-  const res = await fbGet("users", pseudo.toLowerCase());
+  const res = await fbGet("users", pseudo);
   if(!res.ok) return false;
   return res.data.sessionToken === token;
 }
@@ -187,7 +187,7 @@ async function verifySessionToken(pseudo, token){
 =========================== */
 async function loadStateFromFirebase(){
   if(!currentUser) return;
-  const res = await fbGet("states", currentUser.pseudo.toLowerCase());
+  const res = await fbGet("states", currentUser.pseudo);
   if(res.ok && res.data){
     const remote = mergeDefaults(res.data);
     const local = loadLocal();
@@ -203,7 +203,7 @@ async function persistState(){
   if(!currentUser) return;
   saveLocal(state);
   state.updatedAt = Date.now();
-  await fbSet("states", currentUser.pseudo.toLowerCase(), state);
+  await fbSet("states", currentUser.pseudo, state);
   saveLocal(state);
 }
 
@@ -242,7 +242,7 @@ function updateUserChip(){
   if(el && currentUser) el.textContent=currentUser.pseudo;
   // Mettre à jour le titre de l'écran auth aussi
   const authTitle=document.querySelector("#auth_login h2");
-  if(authTitle) authTitle.textContent="METHODS — Connexion";
+  if(authTitle) authTitle.textContent="METHODS";
 }
 
 function showWaitScreen(){
@@ -710,8 +710,9 @@ function renderSlots(){
         </button>
       </div>
       <div class="slotTools">
-        <button class="toolBtn" data-tool="tirage" title="Tirage">ABC</button>
+        <button class="toolBtn" data-tool="tirage" title="Lettres alphabétiques">ABC</button>
         <button class="toolBtn" data-tool="def" title="Définition">📖</button>
+        <button class="toolBtn" data-tool="len" title="Nombre de lettres">123</button>
       </div>`;
     list.appendChild(li);
 
@@ -741,11 +742,29 @@ function applyHint(i){
   if(hintMode[i]==="tirage"){
     hint.textContent = targets[i].t;
     hint.style.display="flex";
+  }else if(hintMode[i]==="len"){
+    const w = targets[i].c || targets[i].e || "";
+    hint.textContent = w.replace(/[^A-Za-zÀ-ÿ]/g,"").length + " lettres";
+    hint.style.display="flex";
   }else{
     hint.style.display="none";
   }
 }
-function applyHintsAll(){ for(let i=0;i<10;i++) applyHint(i); }
+function applyHintsAll(){ for(let i=0;i<10;i++) applyHint(i); applyHintVisibility(); }
+
+function applyHintVisibility(){
+  const list=$("#liste"); if(!list) return;
+  list.querySelectorAll(".toolBtn[data-tool='tirage']").forEach(b=>{
+    b.style.display = settings.hintAbc ? "" : "none";
+  });
+  list.querySelectorAll(".toolBtn[data-tool='def']").forEach(b=>{
+    b.style.display = settings.hintDef ? "" : "none";
+  });
+  list.querySelectorAll(".toolBtn[data-tool='len']").forEach(b=>{
+    b.style.display = settings.hintLen ? "" : "none";
+  });
+}
+
 
 function revealSlot(i, failed=false){
   const li=$("#liste")?.querySelector(`li[data-slot="${i}"]`);
@@ -803,6 +822,7 @@ function finalizeList(wasSolvedWithHelp){
   clearCurrentRun();
   computeStats();
   persistState().catch(()=>{});
+  chronoStop();
 }
 
 function updateCounter(){
@@ -858,6 +878,7 @@ function validateWord(raw){
 let solutionsShown = true; // démarre en mode "Jouer"
 
 function showSolutions(){
+  chronoStop();
   markAidUsed();
   for(let i=0;i<10;i++){
     if(!found.has(i)){
@@ -895,7 +916,7 @@ function resetSolutionsBtn(){ solutionsShown=false; updateSolutionsBtn(); }
    SETTINGS
 =========================== */
 const LS_SETTINGS = "METHODS_SETTINGS_V1";
-let settings = { chronoEnabled: true, chronoDuration: 10 }; // durée en minutes
+let settings = { chronoEnabled: true, chronoDuration: 10, hintAbc: true, hintDef: true, hintLen: true };
 
 function loadSettings(){
   try{ const s=JSON.parse(localStorage.getItem(LS_SETTINGS)||"null"); if(s) settings=Object.assign(settings,s); }catch{}
@@ -1037,6 +1058,15 @@ function wire(){
         markAidUsed();
         if(found.has(i)) return;
         hintMode[i] = (hintMode[i]==="tirage") ? "none" : "tirage";
+        applyHint(i);
+        saveCurrentRun();
+        scheduleSync();
+        return;
+      }
+      if(which==="len"){
+        markAidUsed();
+        if(found.has(i)) return;
+        hintMode[i] = (hintMode[i]==="len") ? "none" : "len";
         applyHint(i);
         saveCurrentRun();
         scheduleSync();
