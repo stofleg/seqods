@@ -528,6 +528,46 @@
       .controls #btnNouveau{
         flex: 0 0 auto;
       }
+
+      /* Barre fixe en bas sur mobile */
+      .inputCard{
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        z-index: 50;
+        border-radius: 0;
+        border-top: 1px solid var(--stroke);
+        padding: 10px 12px;
+        padding-bottom: calc(10px + env(safe-area-inset-bottom));
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        background: rgba(255,255,255,.88);
+      }
+      @media(prefers-color-scheme:dark){
+        .inputCard{ background: rgba(14,20,40,.92); }
+      }
+      .inputCard .controls{
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 8px;
+      }
+      .inputCard .controls #chronoDisplay{
+        flex-shrink: 0;
+        font-size: 15px;
+        min-width: 44px;
+      }
+      .inputCard .controls input{
+        flex: 1 1 0;
+        min-width: 0;
+      }
+      .inputCard .controls #btnSolutions{
+        flex-shrink: 0;
+      }
+      /* Espace pour que le contenu ne soit pas masqué par la barre */
+      .card{
+        padding-bottom: calc(80px + env(safe-area-inset-bottom));
+      }
     }
 
     #authScreen{
@@ -555,6 +595,8 @@
     .authLink{background:none;border:none;color:var(--accent);font-size:13px;cursor:pointer;padding:0;text-decoration:underline;}
     .authLinks{margin-top:14px;display:flex;gap:14px;flex-wrap:wrap;}
     #authErr{min-height:18px;font-size:13px;font-weight:700;margin-top:10px;}
+    .chronoExpired{ color:var(--danger,#e53) !important; animation:chronoPulse 1s ease-in-out infinite; }
+    @keyframes chronoPulse{ 0%,100%{opacity:1;} 50%{opacity:.4;} }
   </style>
 </head>
 <body>
@@ -571,7 +613,7 @@
           <div class="chipRow">
             <div class="chip">Progression&nbsp;: <strong id="compteur">0/10</strong></div>
             <span id="userChip" style="font-size:13px;font-weight:700;color:var(--accent);"></span>
-            <button id="btnLogout" class="btn" type="button" title="Déconnexion" style="padding:6px 10px;">⏏</button>
+            <button id="btnSettings" class="btn" type="button" title="Paramètres" style="padding:6px 10px;">⚙️</button><button id="btnLogout" class="btn" type="button" title="Déconnexion" style="padding:6px 10px;">⏏</button>
           </div>
 
           <div class="progressWrap">
@@ -611,6 +653,28 @@
           <button id="btnSolutions" class="btn" type="button" data-mode="rejouer">Jouer</button>
         </div>
         <div class="msg" id="msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALE SETTINGS -->
+  <div class="modal" id="settingsModal" role="dialog" aria-modal="true">
+    <div class="modalCard" style="max-width:320px;">
+      <button class="closeBtn" id="closeSettings" aria-label="Fermer">✕</button>
+      <h3 style="margin:0 0 18px;font-size:17px;font-weight:900;">Paramètres</h3>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <label style="display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:700;font-size:14px;">
+          Chronomètre
+          <input type="checkbox" id="settingsChronoEnabled" checked style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent);">
+        </label>
+        <div id="settingsDurationRow" style="display:flex;flex-direction:column;gap:8px;">
+          <label style="font-weight:700;font-size:14px;">Durée <span id="settingsDurationLabel" style="color:var(--accent);">10 min</span></label>
+          <input type="range" id="settingsDuration" min="1" max="30" value="10" step="1"
+            style="width:100%;accent-color:var(--accent);">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);">
+            <span>1 min</span><span>30 min</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
