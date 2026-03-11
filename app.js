@@ -724,6 +724,12 @@ function showWaitScreen(){
   if(borneB){borneB.textContent="—";borneB.onclick=null;}
   const list=$("#liste"); if(list) list.innerHTML="";
   const msg=$("#msg"); if(msg){msg.textContent="";msg.className="msg";}
+  // Chrono : afficher 00:00 en blanc
+  const cd=$("#chronoDisplay");
+  if(cd){
+    cd.textContent=settings.chronoEnabled?"00:00":"";
+    cd.classList.remove("running","chronoExpired");
+  }
   updateSolutionsBtn();
 }
 function wireAuth(){
@@ -732,7 +738,7 @@ function wireAuth(){
     currentUser={pseudo,token}; saveSession(currentUser);
     showGameScreen(); state=defaultState();
     await loadStateFromFirebase(); updateUserChip();
-    if(restoreCurrentRunIfAny()) renderAll(); else showWaitScreen();
+    showWaitScreen();
     setInterval(()=>persistState().catch(()=>{}),60000);
   };
   $("#btnLogin")?.addEventListener("click",async()=>{
@@ -802,8 +808,10 @@ function chronoUpdate(){
 }
 function chronoStart(){
   chronoStop();
-  if(!settings.chronoEnabled){chronoUpdate();return;}
+  const cd=$("#chronoDisplay");
+  if(!settings.chronoEnabled){if(cd){cd.textContent="";cd.classList.remove("running");}return;}
   chronoRemaining=settings.chronoDuration*60;
+  if(cd) cd.classList.add("running");
   chronoUpdate();
   chronoInterval=setInterval(()=>{if(chronoRemaining>0){chronoRemaining--;chronoUpdate();}},1000);
 }
@@ -983,7 +991,7 @@ async function start(){
     state=defaultState();
     await loadStateFromFirebase();
     updateUserChip();
-    if(restoreCurrentRunIfAny()) renderAll(); else showWaitScreen();
+    showWaitScreen();
     setInterval(()=>persistState().catch(()=>{}),60000);
     return;
   }
