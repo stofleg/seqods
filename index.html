@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>SeqOds</title>
+  <title>METHODS</title>
   <style>
     :root{
       --bg0:#f6f8ff; --bg1:#ffffff;
@@ -184,22 +184,24 @@
 
     .progressWrap{
       display:flex;
-      flex-direction:column;
-      gap:8px;
-      width:240px;
-      max-width:54vw;
+      flex-direction:row;
+      gap:12px;
+      width:100%;
+      max-width:400px;
     }
 
     .progLine{
       display:flex;
       flex-direction:column;
-      gap:6px;
+      gap:5px;
+      flex:1 1 0;
+      min-width:0;
     }
 
     .progLabel{
       display:flex;
       justify-content:space-between;
-      gap:8px;
+      gap:4px;
       font-size:11px;
       color:var(--muted);
       font-weight:800;
@@ -601,6 +603,54 @@
     #authErr{min-height:18px;font-size:13px;font-weight:700;margin-top:10px;}
     .chronoExpired{ color:var(--danger,#e53) !important; animation:chronoPulse 1s ease-in-out infinite; }
     @keyframes chronoPulse{ 0%,100%{opacity:1;} 50%{opacity:.4;} }
+
+    /* ── App Header ── */
+    .appHeader{
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 14px 10px;
+      border-radius: var(--radius) var(--radius) 0 0;
+      position: relative;
+    }
+    .appTitle{
+      margin: 0;
+      font-size: clamp(22px, 6vw, 32px);
+      font-weight: 950;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-align: center;
+      -webkit-text-fill-color: unset;
+      color: var(--txt);
+    }
+    .appTitle .ods-letter{
+      color: var(--accent);
+    }
+    .appUserBar{
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .userChip{
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--txt);
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: var(--chip);
+      border: 1px solid var(--chipStroke);
+      white-space: nowrap;
+    }
+    .iconBtn{
+      padding: 7px 10px;
+      font-size: 15px;
+      line-height: 1;
+    }
+    .appHeader .progressWrap{
+      width: 100%;
+      max-width: 340px;
+    }
   </style>
 </head>
 <body>
@@ -608,27 +658,23 @@
   <div id="gameScreen">
   <div class="wrap">
     <div class="card">
-      <div class="topBar">
-        <div class="title">
-          <h1>SeqOds</h1>
+      <!-- HEADER -->
+      <span id="compteur" style="display:none;">0/10</span>
+      <div class="appHeader">
+        <h1 class="appTitle">METH<span class="ods-letter">O</span><span class="ods-letter">D</span><span class="ods-letter">S</span></h1>
+        <div class="appUserBar">
+          <button id="btnLogout" class="btn iconBtn" type="button" title="Déconnexion">⏏</button>
+          <span id="userChip" class="userChip"></span>
+          <button id="btnSettings" class="btn iconBtn" type="button" title="Paramètres">⚙️</button>
         </div>
-
-        <div class="rightCol">
-          <div class="chipRow">
-            <div class="chip">Progression&nbsp;: <strong id="compteur">0/10</strong></div>
-            <span id="userChip" style="font-size:13px;font-weight:700;color:var(--accent);"></span>
-            <button id="btnSettings" class="btn" type="button" title="Paramètres" style="padding:6px 10px;">⚙️</button><button id="btnLogout" class="btn" type="button" title="Déconnexion" style="padding:6px 10px;">⏏</button>
+        <div class="progressWrap">
+          <div class="progLine">
+            <div class="progLabel"><span>Listes vues</span><span id="seenCount">0/0</span></div>
+            <div class="bar"><div class="fill" id="seenBar"></div></div>
           </div>
-
-          <div class="progressWrap">
-            <div class="progLine">
-              <div class="progLabel"><span>Listes vues</span><span id="seenCount">0/0</span></div>
-              <div class="bar"><div class="fill" id="seenBar"></div></div>
-            </div>
-            <div class="progLine">
-              <div class="progLabel"><span>Listes validées</span><span id="valCount">0/0</span></div>
-              <div class="bar"><div class="fill green" id="valBar"></div></div>
-            </div>
+          <div class="progLine">
+            <div class="progLabel"><span>Listes validées</span><span id="valCount">0/0</span></div>
+            <div class="bar"><div class="fill green" id="valBar"></div></div>
           </div>
         </div>
       </div>
@@ -675,21 +721,17 @@
         <!-- Toggle chrono -->
         <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
           <span style="font-size:15px;font-weight:700;color:var(--txt);">Chronomètre</span>
-          <label style="position:relative;display:inline-block;width:48px;height:28px;flex-shrink:0;cursor:pointer;">
-            <input type="checkbox" id="settingsChronoEnabled" checked
-              style="opacity:0;width:0;height:0;position:absolute;">
-            <span id="toggleTrack" style="
-              position:absolute;inset:0;border-radius:28px;
-              background:var(--muted);transition:background .2s;
-            "></span>
-            <span id="toggleThumb" style="
-              position:absolute;top:4px;left:4px;width:20px;height:20px;
-              border-radius:50%;background:#fff;
-              transition:transform .2s;
-              box-shadow:0 1px 4px rgba(0,0,0,.25);
-              pointer-events:none;
-            "></span>
-          </label>
+          <button id="toggleChrono" type="button" aria-pressed="true" style="
+            position:relative;width:52px;height:28px;border-radius:28px;
+            border:none;cursor:pointer;padding:0;flex-shrink:0;
+            background:var(--accent);transition:background .25s;
+          "><span id="toggleThumb" style="
+            position:absolute;top:4px;left:4px;width:20px;height:20px;
+            border-radius:50%;background:#fff;
+            transition:transform .25s;
+            box-shadow:0 1px 4px rgba(0,0,0,.3);
+            pointer-events:none;transform:translateX(24px);
+          "></span></button>
         </div>
 
         <!-- Durée -->
@@ -700,9 +742,6 @@
           </div>
           <input type="range" id="settingsDuration" min="1" max="30" value="10" step="1"
             style="width:100%;accent-color:var(--accent);cursor:pointer;">
-          <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:12px;color:var(--muted);">
-            <span>1 min</span><span>15 min</span><span>30 min</span>
-          </div>
         </div>
 
       </div>
