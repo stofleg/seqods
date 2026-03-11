@@ -571,26 +571,22 @@
   <div id="gameScreen">
   <div class="wrap">
     <div class="card">
-      <div class="topBar">
-        <div class="title">
-          <h1>METHODS</h1>
+      <span id="compteur" style="display:none;">0/10</span>
+      <div class="appHeader">
+        <h1 class="appTitle">METHODS</h1>
+        <div class="appUserBar">
+          <button id="btnLogout" class="btn iconBtn" type="button" title="Déconnexion">⏏</button>
+          <span id="userChip" class="userChip"></span>
+          <button id="btnSettings" class="btn iconBtn" type="button" title="Paramètres">⚙️</button>
         </div>
-
-        <div class="rightCol">
-          <div class="chipRow">
-            <div class="chip">Progression&nbsp;: <strong id="compteur">0/10</strong></div>
-            <button id="btnDropbox" class="btn" type="button">Connexion Dropbox</button>
+        <div class="progressWrap">
+          <div class="progLine">
+            <div class="progLabel"><span>Listes vues</span><span id="seenCount">0/0</span></div>
+            <div class="bar"><div class="fill" id="seenBar"></div></div>
           </div>
-
-          <div class="progressWrap">
-            <div class="progLine">
-              <div class="progLabel"><span>Listes vues</span><span id="seenCount">0/0</span></div>
-              <div class="bar"><div class="fill" id="seenBar"></div></div>
-            </div>
-            <div class="progLine">
-              <div class="progLabel"><span>Listes validées</span><span id="valCount">0/0</span></div>
-              <div class="bar"><div class="fill green" id="valBar"></div></div>
-            </div>
+          <div class="progLine">
+            <div class="progLabel"><span>Listes validées</span><span id="valCount">0/0</span></div>
+            <div class="bar"><div class="fill green" id="valBar"></div></div>
           </div>
         </div>
       </div>
