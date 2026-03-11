@@ -744,7 +744,7 @@ function applyHint(i){
     hint.style.display="flex";
   }else if(hintMode[i]==="len"){
     const w = targets[i].c || targets[i].e || "";
-    hint.textContent = w.replace(/[^A-Za-zÀ-ÿ]/g,"").length + " lettres";
+    hint.textContent = w.replace(/[^A-Za-zÀ-ÿ]/g,"").length;
     hint.style.display="flex";
   }else{
     hint.style.display="none";
@@ -905,6 +905,9 @@ function updateSolutionsBtn(){
     btnS.dataset.mode="solutions";
     btnS.classList.add("btnDanger");
   }
+  // Réglages accessibles seulement hors partie active
+  const btnSet=$("#btnSettings");
+  if(btnSet) btnSet.style.display = solutionsShown ? "" : "none";
 }
 
 function switchToRejouer(){ solutionsShown=true; updateSolutionsBtn(); }
@@ -979,6 +982,7 @@ function updateAllToggleUIs(){
 
 function openSettings(){
   const modal=$("#settingsModal"); if(!modal) return;
+  wireHintTogglesOnce();
   const slider=$("#settingsDuration"), lbl=$("#settingsDurationLabel");
   if(slider) slider.value=settings.chronoDuration;
   if(lbl) lbl.textContent=settings.chronoDuration+" min";
@@ -1023,19 +1027,21 @@ function wireSettings(){
     saveSettings();
   });
 
-  // Toggles indices (label+checkbox)
-  const hintMap = [
-    ["settingsHintAbc","hintAbc"],
-    ["settingsHintDef","hintDef"],
-    ["settingsHintLen","hintLen"]
-  ];
+  const backdrop=$("#settingsBackdrop");
+  if(backdrop) backdrop.addEventListener("click", closeSettings);
+}
+
+let hintToggleWired = false;
+function wireHintTogglesOnce(){
+  if(hintToggleWired) return;
+  const hintMap=[["settingsHintAbc","hintAbc"],["settingsHintDef","hintDef"],["settingsHintLen","hintLen"]];
+  let allFound = true;
   hintMap.forEach(([id,key])=>{
     const chk=$("#"+id);
-    if(!chk) return;
-    // Clic sur le track visuel (frère du checkbox)
-    const track=chk.parentElement ? chk.parentElement.querySelector(".toggleTrackS") : null;
-    const thumb=chk.parentElement ? chk.parentElement.querySelector(".toggleThumbS") : null;
-    const clickHandler=()=>{
+    if(!chk){ allFound=false; return; }
+    const track=chk.parentElement?.querySelector(".toggleTrackS");
+    const thumb=chk.parentElement?.querySelector(".toggleThumbS");
+    const handler=()=>{
       settings[key]=!settings[key];
       chk.checked=settings[key];
       if(track) track.style.background=settings[key]?"var(--accent)":"var(--muted)";
@@ -1043,12 +1049,10 @@ function wireSettings(){
       saveSettings();
       applyHintSettings();
     };
-    if(track) track.addEventListener("click", clickHandler);
-    if(thumb) thumb.addEventListener("click", clickHandler);
+    if(track) track.addEventListener("click", handler);
+    if(thumb) thumb.addEventListener("click", handler);
   });
-
-  const backdrop=$("#settingsBackdrop");
-  if(backdrop) backdrop.addEventListener("click", closeSettings);
+  if(allFound) hintToggleWired=true;
 }
 
 /* ===========================
