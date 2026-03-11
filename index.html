@@ -559,6 +559,8 @@
     .pseudoHint.taken{ color:var(--danger,#e53); }
     .pseudoHint.checking{ color:var(--muted); }
     /* ── Chrono ── */
+    #chronoDisplay{ color:var(--txt); }
+    #chronoDisplay.running{ color:var(--muted); }
     .chronoExpired{ color:var(--danger,#e53) !important;animation:chronoPulse 1s ease-in-out infinite; }
     @keyframes chronoPulse{ 0%,100%{opacity:1;}50%{opacity:.4;} }
     /* ── Mobile barre fixe ── */
@@ -607,7 +609,7 @@
 
       <div class="inputCard">
         <div class="controls">
-          <span id="chronoDisplay" style="font-variant-numeric:tabular-nums;font-size:18px;font-weight:700;color:var(--muted);letter-spacing:0.04em;min-width:52px;text-align:center;flex-shrink:0;"></span>
+          <span id="chronoDisplay" style="font-variant-numeric:tabular-nums;font-size:18px;font-weight:700;letter-spacing:0.04em;min-width:52px;text-align:center;flex-shrink:0;"></span>
           <input
             id="saisie"
             type="text"
