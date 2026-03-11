@@ -752,18 +752,7 @@ function applyHint(i){
 }
 function applyHintsAll(){ for(let i=0;i<10;i++) applyHint(i); applyHintVisibility(); }
 
-function applyHintVisibility(){
-  const list=$("#liste"); if(!list) return;
-  list.querySelectorAll(".toolBtn[data-tool='tirage']").forEach(b=>{
-    b.style.display = settings.hintAbc ? "" : "none";
-  });
-  list.querySelectorAll(".toolBtn[data-tool='def']").forEach(b=>{
-    b.style.display = settings.hintDef ? "" : "none";
-  });
-  list.querySelectorAll(".toolBtn[data-tool='len']").forEach(b=>{
-    b.style.display = settings.hintLen ? "" : "none";
-  });
-}
+
 
 
 function revealSlot(i, failed=false){
