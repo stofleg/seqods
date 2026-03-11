@@ -651,6 +651,11 @@
       width: 100%;
       max-width: 340px;
     }
+
+    .toggleTrackS{ background: var(--muted); }
+    .toggleTrackS.on{ background: var(--accent); }
+    .toggleThumbS{ transform: translateX(0); }
+    .toggleThumbS.on{ transform: translateX(20px); }
   </style>
 </head>
 <body>
@@ -744,6 +749,53 @@
             style="width:100%;accent-color:var(--accent);cursor:pointer;">
         </div>
 
+        <!-- Séparateur -->
+        <div style="height:1px;background:var(--stroke);margin:4px 0;"></div>
+
+        <!-- Indices disponibles -->
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div style="font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;">Indices disponibles</div>
+
+          <!-- ABC -->
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+            <div style="display:flex;flex-direction:column;gap:3px;">
+              <span style="font-weight:800;font-size:14px;">ABC</span>
+              <span style="font-size:12px;color:var(--muted);line-height:1.4;">Affiche les lettres du mot dans l'ordre alphabétique</span>
+            </div>
+            <label style="position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0;margin-top:2px;">
+              <input type="checkbox" id="settingsHintAbc" checked style="opacity:0;width:0;height:0;position:absolute;">
+              <span class="toggleTrackS" style="position:absolute;inset:0;border-radius:26px;cursor:pointer;background:var(--accent);transition:background .2s;"></span>
+              <span class="toggleThumbS" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.3);pointer-events:none;transform:translateX(20px);"></span>
+            </label>
+          </div>
+
+          <!-- Définition -->
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+            <div style="display:flex;flex-direction:column;gap:3px;">
+              <span style="font-weight:800;font-size:14px;">📖 Définition</span>
+              <span style="font-size:12px;color:var(--muted);line-height:1.4;">Affiche la définition du mot dans le dictionnaire</span>
+            </div>
+            <label style="position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0;margin-top:2px;">
+              <input type="checkbox" id="settingsHintDef" checked style="opacity:0;width:0;height:0;position:absolute;">
+              <span class="toggleTrackS" style="position:absolute;inset:0;border-radius:26px;cursor:pointer;background:var(--accent);transition:background .2s;"></span>
+              <span class="toggleThumbS" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.3);pointer-events:none;transform:translateX(20px);"></span>
+            </label>
+          </div>
+
+          <!-- 123 -->
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+            <div style="display:flex;flex-direction:column;gap:3px;">
+              <span style="font-weight:800;font-size:14px;">123</span>
+              <span style="font-size:12px;color:var(--muted);line-height:1.4;">Affiche le nombre de lettres du mot à trouver</span>
+            </div>
+            <label style="position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0;margin-top:2px;">
+              <input type="checkbox" id="settingsHintLen" checked style="opacity:0;width:0;height:0;position:absolute;">
+              <span class="toggleTrackS" style="position:absolute;inset:0;border-radius:26px;cursor:pointer;background:var(--accent);transition:background .2s;"></span>
+              <span class="toggleThumbS" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.3);pointer-events:none;transform:translateX(20px);"></span>
+            </label>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -776,7 +828,7 @@
     if(!el) return;
     el.innerHTML=`<div class="authCard">
       <div id="auth_login">
-        <h2>Odyssée — Connexion</h2>
+        <h2>METHODS</h2>
         <div class="authField"><label>Pseudo</label><input id="authPseudo" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="ton pseudo"/></div>
         <div class="authField"><label>Mot de passe</label><input id="authPass" type="password" autocomplete="current-password" placeholder="••••••"/></div>
         <button id="btnLogin" class="btn" type="button" style="width:100%;justify-content:center;">Se connecter</button>
