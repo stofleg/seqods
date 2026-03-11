@@ -912,6 +912,7 @@ function wire(){
   });
 
   const list=$("#liste");
+  const refocusInput=()=>{ if(window.matchMedia("(pointer:fine)").matches) $("#saisie")?.focus(); };
   if(list) list.addEventListener("click",(e)=>{
     const tool = e.target.closest(".toolBtn");
     if(tool){
@@ -923,13 +924,14 @@ function wire(){
       if(which==="def"){
         markAidUsed();
         openDef(targets[i].f || "", "", targets[i].c, false);
+        refocusInput();
         return;
       }
       if(which==="len"){
         markAidUsed();
         if(found.has(i)) return;
         hintMode[i]=(hintMode[i]==="len")?"none":"len";
-        applyHint(i); saveCurrentRun(); scheduleSync();
+        applyHint(i); saveCurrentRun(); scheduleSync(); refocusInput();
         return;
       }
 
@@ -939,7 +941,7 @@ function wire(){
         hintMode[i] = (hintMode[i]==="tirage") ? "none" : "tirage";
         applyHint(i);
         saveCurrentRun();
-        scheduleSync();
+        scheduleSync(); refocusInput();
         return;
       }
     }
