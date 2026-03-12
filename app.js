@@ -124,6 +124,13 @@ function saveLocal(st){ try{ localStorage.setItem(localStateKey(),JSON.stringify
 /* ===========================
    SRS
 =========================== */
+const INTERVALS=[1,3,7,14,30,60,120];
+function nextInterval(cur){
+  const i=INTERVALS.indexOf(cur);
+  if(i<0) return 3;
+  return INTERVALS[Math.min(INTERVALS.length-1,i+1)];
+}
+
 function ensureListState(st,seqIndex){
   const k=String(seqIndex);
   if(!st.lists[k]) st.lists[k]={seen:false,validated:false,lastResult:"",lastSeen:""};
@@ -606,7 +613,7 @@ function updateSolutionsBtn(){
   if(btnSet) btnSet.style.display=solutionsShown?"":"none";
 }
 
-function switchToRejouer(){ solutionsShown=true; updateSolutionsBtn(); }
+function switchToRejouer(){ chronoStop(); solutionsShown=true; updateSolutionsBtn(); }
 function resetSolutionsBtn(){ solutionsShown=false; updateSolutionsBtn(); }
 
 
