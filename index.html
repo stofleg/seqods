@@ -597,6 +597,43 @@
       .card{ padding-bottom:0; }
       .content{ padding-bottom:calc(74px + env(safe-area-inset-bottom, 0px)); }
     }
+
+    /* ── Mode clavier ouvert (iOS) ── */
+    body.keyboard-open .content{
+      padding-bottom: 10px;
+    }
+    body.keyboard-open ol#liste{
+      gap: 3px;
+      margin: 4px 0;
+    }
+    body.keyboard-open .slotMain{
+      min-height: 30px;
+    }
+    body.keyboard-open .slotWordBtn{
+      padding: 4px 12px;
+      font-size: clamp(11px, 3vw, 14px);
+    }
+    body.keyboard-open .slotHint{
+      font-size: clamp(11px, 3vw, 14px);
+    }
+    body.keyboard-open .toolBtn{
+      width: 36px;
+      border-radius: 10px;
+    }
+    body.keyboard-open .boundBtn{
+      padding: 5px 12px;
+      font-size: clamp(13px, 3.8vw, 18px);
+    }
+    body.keyboard-open .appHeader{
+      padding: 6px 14px 6px;
+      gap: 5px;
+    }
+    body.keyboard-open .appTitle{
+      font-size: clamp(16px, 4.5vw, 22px);
+    }
+    body.keyboard-open .progressWrap{
+      display: none;
+    }
   </style>
 </head>
 <body>
