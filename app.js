@@ -1006,6 +1006,7 @@ function renderAll(){
 =========================== */
 async function start(){
   loadSettings();
+  initKeyboardDetection();
   DICT=D.length>0?new Set(D.map(w=>normalizeWord(w))):new Set(C.map(w=>normalizeWord(w)));
   wire();
   moveNewButtonForMobile();
@@ -1021,6 +1022,38 @@ async function start(){
     return;
   }
   showAuthScreen();
+}
+
+
+/* ===========================
+   KEYBOARD DETECTION (iOS)
+=========================== */
+function initKeyboardDetection(){
+  if(!window.visualViewport) return;
+  let lastHeight = window.visualViewport.height;
+  window.visualViewport.addEventListener("resize", ()=>{
+    const h = window.visualViewport.height;
+    const diff = lastHeight - h;
+    // Si la hauteur diminue de plus de 100px → clavier ouvert
+    if(diff > 100){
+      document.body.classList.add("keyboard-open");
+    } else if(diff < -100 || h > lastHeight - 50){
+      document.body.classList.remove("keyboard-open");
+    }
+    lastHeight = h;
+  });
+  // Aussi sur focus/blur du champ de saisie
+  document.addEventListener("focusin", e=>{
+    if(e.target.id==="saisie") setTimeout(()=>{
+      if(window.visualViewport.height < window.screen.height * 0.75)
+        document.body.classList.add("keyboard-open");
+    }, 300);
+  });
+  document.addEventListener("focusout", e=>{
+    if(e.target.id==="saisie") setTimeout(()=>{
+      document.body.classList.remove("keyboard-open");
+    }, 100);
+  });
 }
 
 document.addEventListener("DOMContentLoaded", start);
