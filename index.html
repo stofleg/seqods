@@ -82,7 +82,7 @@
       height:100%;height:100dvh;
       overflow:hidden;
       margin:0;
-      padding: env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);
+      padding-top: env(safe-area-inset-top,0px);
       font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       color: var(--txt);
       background:
@@ -683,6 +683,16 @@
       }
       @media(prefers-color-scheme:light){
         .appKeyboard{ background:#d0daf0; }
+        .appKeyboard::after{ background:#d0daf0; }
+      }
+      /* Pseudo-élément qui remplit la zone safe-area sous le clavier */
+      .appKeyboard::after{
+        content:"";
+        position:fixed;
+        bottom:0; left:0; right:0;
+        height:env(safe-area-inset-bottom,0px);
+        background:#1a2235;
+        z-index:59;
       }
 
       .kbTopBar{ display:flex;align-items:center;gap:6px;padding:0 2px 2px; }
