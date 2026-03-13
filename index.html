@@ -1,0 +1,777 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=overlays-content" />
+  <title>METHODS</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="METHODS" />
+  <meta name="theme-color" content="#0b1020" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#dce8ff" media="(prefers-color-scheme: light)" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <style>
+    :root{
+      --bg0:#dce8ff; --bg1:#eef3ff;
+      --card: rgba(255,255,255,.92);
+      --stroke: rgba(16,24,80,.18);
+      --shadow: 0 18px 50px rgba(16,24,80,.14);
+      --shadow2: 0 10px 24px rgba(16,24,80,.10);
+      --txt:#06101f; --muted:#3a506e;
+      --accent:#1a65d6; --accent2:#1aa8a8;
+      --ok:#0d6e6e; --warn:#6b35c2; --danger:#b51e1e;
+      --chip:#dceaff; --chipStroke: rgba(26,101,214,.28);
+      --slot: rgba(255,255,255,.88);
+      --slotStroke: rgba(16,24,80,.15);
+      --tool: rgba(240,246,255,.95);
+      --toolStroke: rgba(16,24,80,.18);
+      --focus: rgba(26,101,214,.35);
+      --radius: 18px;
+      --title1:#0a2a6e;
+
+      --redSlotBorder:#b51e1e;
+      --redSlotGlow:rgba(181,30,30,.22);
+      --redSlotBg:rgba(181,30,30,.05);
+      --dottedSlotBorder: rgba(16,24,80,.40);
+      --okSlotBg: rgba(13,110,110,.14);
+      --okSlotBorder: rgba(13,110,110,.48);
+      --failSlotBg: rgba(181,30,30,.14);
+      --failSlotBorder: rgba(181,30,30,.50);
+    }
+
+    @media (prefers-color-scheme: dark){
+      :root{
+        --bg0:#070a12; --bg1:#0b1020;
+        --title1:#ffffff;
+        --card: rgba(18,24,44,.74);
+        --stroke: rgba(255,255,255,.12);
+        --shadow: 0 18px 50px rgba(0,0,0,.55);
+        --shadow2: 0 10px 24px rgba(0,0,0,.45);
+        --txt:#eaf0ff; --muted:#aebad5;
+        --accent:#69a7ff; --accent2:#4fe2e2;
+        --ok:#2dd4d4; --warn:#b78af7; --danger:#ff6b6b;
+        --chip: rgba(105,167,255,.12);
+        --chipStroke: rgba(105,167,255,.22);
+        --slot: rgba(18,24,44,.74);
+        --slotStroke: rgba(255,255,255,.12);
+        --tool: rgba(18,24,44,.78);
+        --toolStroke: rgba(255,255,255,.12);
+        --focus: rgba(105,167,255,.42);
+
+        --redSlotBorder:#ff6b6b;
+        --redSlotGlow:rgba(255,107,107,.28);
+        --redSlotBg:rgba(255,107,107,.06);
+        --dottedSlotBorder: rgba(255,255,255,.50);
+        --okSlotBg: rgba(45,212,212,.12);
+        --okSlotBorder: rgba(45,212,212,.45);
+        --failSlotBg: rgba(255,107,107,.14);
+        --failSlotBorder: rgba(255,107,107,.55);
+      }
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%;height:100dvh;overflow:hidden; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--txt);
+      background:
+        radial-gradient(1200px 900px at 20% 0%, rgba(47,125,246,.20), transparent 50%),
+        radial-gradient(900px 700px at 90% 20%, rgba(56,198,198,.16), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow:hidden;
+    }
+
+    .wrap{
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 10px 10px 0;
+      height:100%;
+      height:100dvh;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .card{
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      flex:1 1 0;
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .topBar{
+      padding: 10px 10px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      border-radius: var(--radius) var(--radius) 0 0;
+      overflow: hidden;
+    }
+
+    .title{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      min-width:0;
+    }
+
+    .title h1{
+      margin:0;
+      font-size:16px;
+      font-weight:900;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .title .sub{
+      margin:0;
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    .rightCol{
+      display:flex;
+      flex-direction:column;
+      align-items:flex-end;
+      gap:8px;
+    }
+
+    .chipRow{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      background:var(--chip);
+      border:1px solid var(--chipStroke);
+      font-weight:850;
+      font-size:13px;
+      white-space:nowrap;
+    }
+
+    .chip strong{ font-variant-numeric: tabular-nums; }
+
+    .btn{
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.08);
+      color:var(--txt);
+      border-radius:12px;
+      padding:9px 10px;
+      font-weight:900;
+      font-size:13px;
+      box-shadow:var(--shadow2);
+      cursor:pointer;
+    }
+
+    @media (prefers-color-scheme: light){
+      .btn{ background: rgba(255,255,255,.82); }
+    }
+
+    .btn:active{ transform: translateY(1px); }
+    .btn:focus{ outline:none; box-shadow: 0 0 0 4px var(--focus), var(--shadow2); }
+
+    .btnDanger{
+      background: rgba(198,40,40,.12);
+      border-color: rgba(198,40,40,.35);
+      color: var(--danger);
+    }
+
+    .divider{
+      height:1px;
+      background:var(--stroke);
+    }
+
+    .progressWrap{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      width:240px;
+      max-width:54vw;
+    }
+
+    .progLine{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+
+    .progLabel{
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      font-size:11px;
+      color:var(--muted);
+      font-weight:800;
+    }
+
+    .bar{
+      height:9px;
+      border-radius:999px;
+      background: rgba(127,127,127,.18);
+      border:1px solid var(--stroke);
+      overflow:hidden;
+    }
+
+    .fill{
+      height:100%;
+      width:0%;
+      border-radius:999px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: width .35s ease;
+    }
+
+    .fill.green{
+      background: linear-gradient(90deg, rgba(26,143,61,.95), rgba(56,198,198,.95));
+    }
+
+    .content{
+      padding:10px;
+      flex:1 1 0;
+      min-height:0;
+      overflow-y:auto;
+      -webkit-overflow-scrolling:touch;
+    }
+
+    .boundBtn{
+      width:100%;
+      border:1px solid var(--stroke);
+      background: linear-gradient(135deg, rgba(47,125,246,.18), rgba(56,198,198,.14));
+      border-radius:999px;
+      padding:10px 12px;
+      text-align:center;
+      font-size: clamp(16px, 4.8vw, 26px);
+      font-weight:950;
+      box-shadow:var(--shadow2);
+      cursor:pointer;
+      user-select:none;
+      color:var(--txt);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    @media (prefers-color-scheme: dark){
+      .boundBtn{
+        color:#fff;
+        text-shadow: 0 2px 10px rgba(0,0,0,.6);
+      }
+    }
+
+    ol#liste{
+      list-style:none;
+      padding:0;
+      margin:10px 0;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+
+    .slot{
+      display:flex;
+      align-items:stretch;
+      gap:8px;
+    }
+
+    .slotMain{
+      flex:1 1 auto;
+      border:1px solid var(--slotStroke);
+      border-radius:999px;
+      background:var(--slot);
+      box-shadow:var(--shadow2);
+      min-height:40px;
+      display:flex;
+      overflow:hidden;
+      position:relative;
+      transition: box-shadow .15s ease, border-color .15s ease, background .15s ease;
+    }
+
+    .slotMain.redFlag{
+      border: 2px dotted var(--dottedSlotBorder);
+      background: var(--slot);
+      box-shadow: var(--shadow2);
+    }
+
+    .slotMain.slotValidated{
+      background:
+        linear-gradient(0deg, var(--okSlotBg), var(--okSlotBg)),
+        var(--slot);
+      border-color: var(--okSlotBorder);
+    }
+
+    .slotMain.slotFailed{
+      background:
+        linear-gradient(0deg, var(--failSlotBg), var(--failSlotBg)),
+        var(--slot);
+      border-color: var(--failSlotBorder);
+    }
+
+    .slotWordBtn{
+      width:100%;
+      border:0;
+      background:transparent;
+      border-radius:999px;
+      padding:8px 12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      font-size: clamp(13px, 3.6vw, 16px);
+      font-weight:900;
+      color:var(--txt);
+      cursor:pointer;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .slotWordBtn:focus{
+      outline:none;
+      box-shadow: inset 0 0 0 4px var(--focus);
+    }
+
+    .slotHint{
+      position:absolute;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:0 12px;
+      font-size: clamp(13px, 3.6vw, 16px);
+      font-weight:950;
+      opacity:.22;
+      pointer-events:none;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .slotTools{
+      display:flex;
+      flex:0 0 auto;
+      gap:6px;
+      align-items:stretch;
+    }
+
+    .toolBtn{
+      width:46px;
+      border-radius:14px;
+      border:1px solid var(--toolStroke);
+      background:var(--tool);
+      box-shadow:var(--shadow2);
+      padding:0;
+      font-size:12px;
+      font-weight:950;
+      color:var(--txt);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      user-select:none;
+    }
+
+    .toolBtn:disabled{
+      opacity:.45;
+      cursor:default;
+      box-shadow:none;
+    }
+
+    @media (prefers-color-scheme: light){
+      .toolBtn[data-tool="tirage"]{
+        background: linear-gradient(135deg,#e0f2fe,#bae6fd);
+        border-color:#7dd3fc;
+        color:#0369a1;
+      }
+      .toolBtn[data-tool="def"]{
+        background: linear-gradient(135deg,#ede9fe,#ddd6fe);
+        border-color:#c4b5fd;
+        color:#5b21b6;
+        font-size:16px;
+      }
+    }
+
+    .inputCard{
+      padding:10px;
+      border-top:1px solid var(--stroke);
+      background: rgba(255,255,255,.04);
+      border-radius: 0 0 var(--radius) var(--radius);
+      flex-shrink:0;
+    }
+
+    @media (prefers-color-scheme: light){
+      .inputCard{ background: rgba(255,255,255,.55); }
+    }
+
+    .controls{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    input{
+      flex:1 1 auto;
+      min-width:180px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.70);
+      color:var(--txt);
+      font-size:16px;
+      outline:none;
+      box-shadow:var(--shadow2);
+      text-transform: uppercase;
+    }
+
+    @media (prefers-color-scheme: dark){
+      input{ background: rgba(18,24,44,.78); }
+    }
+
+    input:focus{
+      box-shadow: 0 0 0 4px var(--focus), var(--shadow2);
+    }
+
+    .msg{
+      display: block;
+      margin-top:8px;
+      min-height:20px;
+      font-size:13px;
+      font-weight: 700;
+      color:var(--muted);
+    }
+
+    .msg.ok{ color:var(--ok); }
+    .msg.warn{ color:var(--warn); }
+    .msg.err{ color:var(--danger); }
+    .msg.horsjeu{ color:var(--accent); }
+
+    .modal{
+      position:fixed;
+      inset:0;
+      display:none;
+      z-index:50;
+    }
+
+    .modal.open{ display:block; }
+
+    .backdrop{
+      position:absolute;
+      inset:0;
+      background: rgba(0,0,0,.45);
+    }
+
+    @media (prefers-color-scheme: dark){
+      .backdrop{ background: rgba(0,0,0,.60); }
+    }
+
+    .panel{
+      position:fixed;
+      left:10px;
+      right:10px;
+      top:50%;
+      transform: translateY(-50%);
+      max-width:680px;
+      margin:0 auto;
+      background:var(--card);
+      border:1px solid var(--stroke);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding:12px;
+      max-height: calc(100svh - 20px);
+      overflow:auto;
+    }
+
+    .panelTop{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .panel h2{
+      margin:0;
+      font-size:18px;
+      font-weight:950;
+    }
+
+    .panel p{
+      margin:10px 0 0;
+      font-size:14px;
+      line-height:1.35;
+      white-space:pre-wrap;
+    }
+
+    @media (max-width: 640px){
+      .topBar{
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .rightCol{
+        width: 100%;
+        align-items: stretch;
+      }
+
+      .chipRow{
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .progressWrap{
+        display: flex;
+        width: 100%;
+        max-width: none;
+      }
+
+      .toolBtn{ width:42px; }
+
+      .controls{
+        align-items: stretch;
+      }
+
+      .controls #btnNouveau{
+        flex: 0 0 auto;
+      }
+    }
+
+    /* ── App Header ── */
+    .appHeader{ display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px 14px 10px;border-radius:var(--radius) var(--radius) 0 0; }
+    .appTitle{ margin:0;font-size:clamp(22px,6vw,32px);font-weight:950;letter-spacing:0.12em;text-transform:uppercase;text-align:center; }
+    .appTitle .part1{ color:var(--title1,#fff); }
+    .appTitle .part2{ background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; }
+    .appUserBar{ display:flex;align-items:center;gap:8px; }
+    .userChip{ font-size:14px;font-weight:800;color:var(--txt);padding:5px 12px;border-radius:999px;background:var(--chip);border:1px solid var(--chipStroke);white-space:nowrap; }
+    .iconBtn{ padding:7px 10px;font-size:15px;line-height:1; }
+    .appHeader .progressWrap{ width:100%;max-width:400px; }
+    /* ── Barres côte à côte ── */
+    .progressWrap{ display:flex;flex-direction:row;gap:12px;width:240px;max-width:54vw; }
+    .progLine{ display:flex;flex-direction:column;gap:5px;flex:1 1 0;min-width:0; }
+    /* ── Auth ── */
+    #authScreen{ position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:radial-gradient(1200px 900px at 20% 0%,rgba(47,125,246,.20),transparent 50%),radial-gradient(900px 700px at 90% 20%,rgba(56,198,198,.16),transparent 55%),linear-gradient(180deg,var(--bg0),var(--bg1)); }
+    .authCard{ background:var(--card);border:1px solid var(--stroke);border-radius:var(--radius);box-shadow:var(--shadow);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:24px 20px;width:100%;max-width:360px;margin:16px; }
+    .authCard h2{ margin:0 0 18px;font-size:20px;font-weight:900; }
+    .authField{ display:flex;flex-direction:column;gap:6px;margin-bottom:14px; }
+    .authField label{ font-size:13px;font-weight:700;color:var(--muted); }
+    .authField input{ padding:10px 12px;border-radius:12px;border:1px solid var(--stroke);background:rgba(255,255,255,.70);color:var(--txt);font-size:15px;outline:none;box-shadow:var(--shadow2);text-transform:none; }
+    @media(prefers-color-scheme:dark){ .authField input{ background:rgba(18,24,44,.78); } }
+    .authField input:focus{ box-shadow:0 0 0 4px var(--focus),var(--shadow2); }
+    .authLink{ background:none;border:none;color:var(--accent);font-size:13px;cursor:pointer;padding:0;text-decoration:underline; }
+    .authLinks{ margin-top:14px;display:flex;gap:14px;flex-wrap:wrap; }
+    #authErr{ min-height:18px;font-size:13px;font-weight:700;margin-top:10px; }
+    .pseudoHint{ font-size:12px;font-weight:700;margin-top:4px;display:block;min-height:16px; }
+    .pseudoHint.available{ color:#1a8f3d; }
+    .pseudoHint.taken{ color:var(--danger,#e53); }
+    .pseudoHint.checking{ color:var(--muted); }
+    /* ── Chrono ── */
+    #chronoDisplay{ color:var(--txt); }
+    #chronoDisplay.running{ color:var(--muted); }
+    .chronoExpired{ color:var(--danger,#e53) !important;animation:chronoPulse 1s ease-in-out infinite; }
+    @keyframes chronoPulse{ 0%,100%{opacity:1;}50%{opacity:.4;} }
+    /* ── Mobile barre fixe ── */
+    @media(max-width:640px){
+      .inputCard{ position:fixed;bottom:0;left:0;right:0;z-index:50;border-radius:0;border-top:1px solid var(--stroke);padding:10px 12px;padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 10px);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);background:rgba(255,255,255,.88); }
+      @media(prefers-color-scheme:dark){ .inputCard{ background:rgba(14,20,40,.92); } }
+      .inputCard .controls{ display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;gap:8px; }
+      .inputCard .controls>*{ flex-shrink:0; }
+      .inputCard .controls input{ flex:1 1 0 !important;min-width:0 !important;width:0; }
+      .card{ padding-bottom:0; }
+      .content{ padding-bottom:calc(74px + env(safe-area-inset-bottom, 0px)); }
+    }
+  </style>
+</head>
+<body>
+  <div id="authScreen" style="display:none;"></div>
+  <div id="gameScreen" style="height:100%;height:100dvh;display:flex;flex-direction:column;">
+  <div class="wrap">
+    <div class="card">
+      <span id="compteur" style="display:none;">0/10</span>
+      <div class="appHeader">
+        <h1 class="appTitle"><span class="part1">METH</span><span class="part2">ODS</span></h1>
+        <div class="appUserBar">
+          <button id="btnLogout" class="btn iconBtn" type="button" title="Déconnexion">⏏</button>
+          <span id="userChip" class="userChip"></span>
+          <button id="btnSettings" class="btn iconBtn" type="button" title="Paramètres">⚙️</button>
+        </div>
+        <div class="progressWrap">
+          <div class="progLine">
+            <div class="progLabel"><span>Listes vues</span><span id="seenCount">0/0</span></div>
+            <div class="bar"><div class="fill" id="seenBar"></div></div>
+          </div>
+          <div class="progLine">
+            <div class="progLabel"><span>Listes validées</span><span id="valCount">0/0</span></div>
+            <div class="bar"><div class="fill green" id="valBar"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="content">
+        <button id="borneA" class="boundBtn" type="button"></button>
+        <ol id="liste" aria-label="Liste des 10 solutions"></ol>
+        <button id="borneB" class="boundBtn" type="button"></button>
+      </div>
+
+      <div class="inputCard">
+        <div class="controls">
+          <span id="chronoDisplay" style="font-variant-numeric:tabular-nums;font-size:18px;font-weight:700;letter-spacing:0.04em;min-width:52px;text-align:center;flex-shrink:0;"></span>
+          <input
+            id="saisie"
+            type="text"
+            inputmode="text"
+            autocomplete="off"
+            autocapitalize="characters"
+            autocorrect="off"
+            spellcheck="false"
+            placeholder="Saisie"
+          />
+          <button id="btnSolutions" class="btn" type="button" data-mode="rejouer">Jouer</button>
+        </div>
+        <div class="msg" id="msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALE SETTINGS -->
+  <div class="modal" id="settingsModal" role="dialog" aria-modal="true">
+    <div class="backdrop" id="settingsBackdrop"></div>
+    <div class="panel" style="max-width:340px;">
+      <div class="panelTop">
+        <h2>Paramètres</h2>
+        <button id="closeSettings" class="btn" type="button">Fermer</button>
+      </div>
+      <div style="margin-top:20px;display:flex;flex-direction:column;gap:20px;">
+        <!-- Chrono toggle -->
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
+          <span style="font-size:15px;font-weight:700;">Chronomètre</span>
+          <button id="toggleChrono" type="button" aria-pressed="true" style="position:relative;width:52px;height:28px;border-radius:28px;border:none;cursor:pointer;padding:0;flex-shrink:0;background:var(--accent);transition:background .25s;">
+            <span id="toggleThumb" style="position:absolute;top:4px;left:4px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .25s;box-shadow:0 1px 4px rgba(0,0,0,.3);pointer-events:none;transform:translateX(24px);"></span>
+          </button>
+        </div>
+        <!-- Durée -->
+        <div id="settingsDurationRow">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;">
+            <span style="font-size:15px;font-weight:700;">Durée</span>
+            <span id="settingsDurationLabel" style="font-size:24px;font-weight:900;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1;">10 min</span>
+          </div>
+          <input type="range" id="settingsDuration" min="1" max="30" value="10" step="1" style="width:100%;accent-color:var(--accent);cursor:pointer;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px;"><span>1 min</span><span>15 min</span><span>30 min</span></div>
+        </div>
+        <div style="height:1px;background:var(--stroke);"></div>
+        <!-- Indices -->
+        <div style="font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;">Indices disponibles</div>
+        <!-- ABC -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+          <div><div style="font-weight:800;font-size:14px;">ABC</div><div style="font-size:12px;color:var(--muted);margin-top:3px;">Affiche les lettres du mot.</div></div>
+          <label style="position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0;margin-top:2px;">
+            <input type="checkbox" id="settingsHintAbc" checked style="opacity:0;width:0;height:0;position:absolute;">
+            <span class="toggleTrackS" style="position:absolute;inset:0;border-radius:26px;cursor:pointer;background:var(--accent);transition:background .2s;"></span>
+            <span class="toggleThumbS" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.3);pointer-events:none;transform:translateX(20px);"></span>
+          </label>
+        </div>
+        <!-- Def -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+          <div><div style="font-weight:800;font-size:14px;">📖</div><div style="font-size:12px;color:var(--muted);margin-top:3px;">Affiche la définition.</div></div>
+          <label style="position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0;margin-top:2px;">
+            <input type="checkbox" id="settingsHintDef" checked style="opacity:0;width:0;height:0;position:absolute;">
+            <span class="toggleTrackS" style="position:absolute;inset:0;border-radius:26px;cursor:pointer;background:var(--accent);transition:background .2s;"></span>
+            <span class="toggleThumbS" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.3);pointer-events:none;transform:translateX(20px);"></span>
+          </label>
+        </div>
+        <!-- 123 -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+          <div><div style="font-weight:800;font-size:14px;">123</div><div style="font-size:12px;color:var(--muted);margin-top:3px;">Affiche le nombre de lettres.</div></div>
+          <label style="position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0;margin-top:2px;">
+            <input type="checkbox" id="settingsHintLen" checked style="opacity:0;width:0;height:0;position:absolute;">
+            <span class="toggleTrackS" style="position:absolute;inset:0;border-radius:26px;cursor:pointer;background:var(--accent);transition:background .2s;"></span>
+            <span class="toggleThumbS" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.3);pointer-events:none;transform:translateX(20px);"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="defModal" role="dialog" aria-modal="true" aria-labelledby="defTitle">
+    <div class="backdrop" id="defBackdrop"></div>
+    <div class="panel">
+      <div class="panelTop">
+        <h2 id="defTitle"></h2>
+        <button id="defClose" class="btn" type="button">Fermer</button>
+      </div>
+      <p id="defBody"></p>
+      <div id="anaWrap" style="margin-top:10px; color:var(--muted); font-size:13px; line-height:1.35;">
+        <strong style="color:var(--txt);">Anagrammes</strong>
+        <div id="defAna" style="margin-top:6px;"></div>
+      </div>
+      <div id="rallWrap" style="margin-top:10px; color:var(--muted); font-size:13px; line-height:1.35;">
+        <strong style="color:var(--txt);">Rallonges</strong>
+        <div id="defRall" style="margin-top:6px;"></div>
+      </div>
+    </div>
+  </div>
+
+  </div>
+  </div>
+
+  <script>
+  document.addEventListener("DOMContentLoaded",()=>{
+    const el=document.querySelector("#authScreen");
+    if(!el) return;
+    el.innerHTML=`<div class="authCard">
+      <div id="auth_login">
+        <h2>METHODS — Connexion</h2>
+        <div class="authField"><label>Pseudo</label><input id="authPseudo" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="ton pseudo"/></div>
+        <div class="authField"><label>Mot de passe</label><input id="authPass" type="password" autocomplete="current-password" placeholder="••••••"/></div>
+        <button id="btnLogin" class="btn" type="button" style="width:100%;justify-content:center;">Se connecter</button>
+        <div class="authLinks">
+          <button class="authLink" id="toRegister">Créer un compte</button>
+          <button class="authLink" id="toRecover">Mot de passe oublié</button>
+        </div>
+        <div id="authErr" class="msg"></div>
+      </div>
+      <div id="auth_register" style="display:none;">
+        <h2>Créer un compte</h2>
+        <div class="authField"><label>Pseudo</label><input id="regPseudo" type="text" autocapitalize="none" spellcheck="false" placeholder="choisis un pseudo"/><span id="regPseudoHint" class="pseudoHint"></span></div>
+        <div class="authField"><label>Mot de passe</label><input id="regPass" type="password" placeholder="min 4 caractères"/></div>
+        <div class="authField"><label>Question secrète</label><input id="regQuestion" type="text" placeholder="ex : ville natale ?"/></div>
+        <div class="authField"><label>Réponse</label><input id="regAnswer" type="text" autocapitalize="none" placeholder="ta réponse"/></div>
+        <button id="btnRegister" class="btn" type="button" style="width:100%;justify-content:center;">Créer le compte</button>
+        <div class="authLinks"><button class="authLink" id="toLogin">Déjà un compte ? Se connecter</button></div>
+        <div id="authErr" class="msg"></div>
+      </div>
+      <div id="auth_recover" style="display:none;">
+        <h2>Récupérer mon mot de passe</h2>
+        <div class="authField"><label>Pseudo</label><input id="recPseudo" type="text" autocapitalize="none" placeholder="ton pseudo"/></div>
+        <div class="authField"><label>Réponse à ta question secrète</label><input id="recAnswer" type="text" autocapitalize="none" placeholder="ta réponse"/></div>
+        <div class="authField"><label>Nouveau mot de passe</label><input id="recNewPass" type="password" placeholder="min 4 caractères"/></div>
+        <button id="btnDoRecover" class="btn" type="button" style="width:100%;justify-content:center;">Changer le mot de passe</button>
+        <div class="authLinks"><button class="authLink" id="toLogin2">Retour à la connexion</button></div>
+        <div id="authErr" class="msg"></div>
+      </div>
+    </div>`;
+  });
+  </script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
