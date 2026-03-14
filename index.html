@@ -571,6 +571,7 @@
     .appUserBar{ display:flex;align-items:center;gap:8px; }
     .userChip{ font-size:14px;font-weight:800;color:var(--txt);padding:5px 12px;border-radius:999px;background:var(--chip);border:1px solid var(--chipStroke);white-space:nowrap; }
     .iconBtn{ padding:7px 10px;font-size:15px;line-height:1; }
+    .btnSolutionsTop{ padding:5px 14px;font-size:13px;font-weight:800; }
     .appHeader .progressWrap{ width:100%;max-width:400px; }
     /* ── Barres côte à côte ── */
     .progressWrap{ display:flex;flex-direction:row;gap:12px;width:240px;max-width:54vw; }
@@ -648,62 +649,101 @@
     .appKeyboard{ display:none; } /* caché sur desktop */
 
     @media(max-width:640px){
-      /* ── Layout sans scroll : tout tient sur l'écran ── */
       .inputCard{ display:none !important; }
 
-      /* Header compact */
-      .appHeader{ padding:6px 10px 4px;gap:4px; }
-      .appTitle{ font-size:20px; }
-      .appUserBar{ gap:6px; }
-      .iconBtn{ padding:5px 8px;font-size:14px; }
-      .progressWrap{ gap:8px; }
-      .progLine .bar{ height:5px; }
-      .progLabel{ font-size:10px; }
+      /* ── Fond plein écran à fond perdu ── */
+      html{
+        height:100dvh;
+        overflow:hidden;
+        background:#070a12 !important;
+      }
+      @media(prefers-color-scheme:light){
+        html{ background:#dce8ff !important; }
+      }
 
-      /* Liste compacte */
-      ol#liste{ gap:3px;margin:4px 0; }
-      .slotMain{ min-height:32px; }
-      .slotWordBtn{ padding:4px 10px;font-size:13px; }
-      .slotHint{ font-size:13px; }
-      .toolBtn{ width:34px;border-radius:9px; }
-      .boundBtn{ padding:5px 10px;font-size:14px; }
-      .content{ padding:5px 8px 0;overflow-y:auto; }
-
-      /* Clavier : remonté avec safe-area correcte */
-      .appKeyboard{
+      /* ── Body = colonne pleine hauteur avec safe areas ── */
+      body{
+        height:100dvh;
+        overflow:hidden;
         display:flex;
         flex-direction:column;
-        position:fixed;
-        bottom:0; left:0; right:0;
-        z-index:60;
-        background:#1a2235;
-        border-top:1px solid var(--stroke);
-        padding:3px 5px 0;
-        padding-bottom:max(env(safe-area-inset-bottom,0px), 55px);
-        gap:3px;
+        padding-top:env(safe-area-inset-top,0px);
+        padding-bottom:env(safe-area-inset-bottom,0px);
+        box-sizing:border-box;
+        background:none;
       }
-      /* Fond sous le clavier = couleur du clavier, sur toute la hauteur */
-      body::after{
-        content:"";
-        position:fixed;
-        bottom:0; left:0; right:0;
-        height:100px;
+
+      /* ── gameScreen et wrap dans le flux ── */
+      #gameScreen{
+        flex:1 1 0;
+        min-height:0;
+        display:flex;
+        flex-direction:column;
+        height:auto !important;
+        overflow:hidden;
+      }
+      .wrap{
+        flex:1 1 0;
+        min-height:0;
+        height:auto !important;
+        padding:4px 4px 0;
+        display:flex;
+        flex-direction:column;
+      }
+      .card{
+        flex:1 1 0;
+        min-height:0;
+        overflow:hidden;
+        display:flex;
+        flex-direction:column;
+        border-radius:var(--radius) var(--radius) 0 0;
+        margin-bottom:0;
+      }
+      .content{
+        flex:1 1 0;
+        min-height:0;
+        padding:4px 6px 0;
+        overflow:hidden;
+      }
+
+      /* ── Header compact ── */
+      .appHeader{ padding:5px 10px 3px;gap:3px; }
+      .appTitle{ font-size:19px; }
+      .appUserBar{ gap:6px; }
+      .iconBtn{ padding:4px 8px;font-size:13px; }
+      .progLabel{ font-size:10px; }
+      .progLine .bar{ height:4px; }
+
+      /* ── Liste compacte ── */
+      ol#liste{ gap:2px;margin:3px 0; }
+      .slotMain{ min-height:30px; }
+      .slotWordBtn{ padding:3px 10px;font-size:12px; }
+      .slotHint{ font-size:12px; }
+      .toolBtn{ width:32px;border-radius:8px; }
+      .boundBtn{ padding:4px 10px;font-size:13px; }
+
+      /* ── Clavier dans le flux ── */
+      .appKeyboard{
+        flex-shrink:0;
+        display:flex;
+        flex-direction:column;
         background:#1a2235;
-        z-index:55;
+        border-top:none;
+        padding:0 5px 6px;
+        gap:2px;
       }
       @media(prefers-color-scheme:light){
         .appKeyboard{ background:#d0daf0; }
-        body::after{ background:#d0daf0; }
       }
 
-      .kbTopBar{ display:flex;align-items:center;gap:6px;padding:0 2px 1px; }
+      .kbTopBar{ display:flex;align-items:center;gap:6px;padding:0 2px 0; }
       .kbDisplay{
         flex:1 1 0;min-height:30px;background:var(--card);border:1px solid var(--stroke);
         border-radius:8px;display:flex;align-items:center;padding:0 10px;
         font-size:16px;font-weight:800;letter-spacing:0.08em;color:var(--txt);text-transform:uppercase;
       }
       .kbDisplay:empty::after{ content:"…";color:var(--muted);font-weight:400;font-size:13px;letter-spacing:0; }
-      .kbPlayBtn{ flex-shrink:0;padding:6px 12px;font-size:13px; }
+
       .kbMsg{ font-size:11px;font-weight:700;min-height:14px;padding:0 4px;text-align:center; }
       .kbMsg.ok{ color:var(--ok); }
       .kbMsg.warn{ color:var(--warn); }
@@ -713,9 +753,9 @@
       .kbRow{ display:flex;justify-content:center;gap:3px; }
       .kbKey{
         flex:1 1 0;max-width:33px;height:36px;border-radius:7px;border:0;
-        background:#2d3a55;color:var(--txt);font-size:14px;font-weight:700;cursor:pointer;
-        box-shadow:0 2px 0 rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;
-        user-select:none;-webkit-user-select:none;transition:background .08s;
+        background:#2d3a55;color:var(--txt);font-size:14px;font-weight:700;
+        box-shadow:0 2px 0 rgba(0,0,0,.4);display:flex;align-items:center;
+        justify-content:center;user-select:none;-webkit-user-select:none;
       }
       @media(prefers-color-scheme:light){
         .kbKey{ background:#fff;color:#0b1220;box-shadow:0 2px 0 rgba(0,0,0,.25); }
@@ -724,9 +764,6 @@
       .kbWide{ max-width:48px;font-size:12px; }
       .kbEnter{ background:var(--accent);color:#fff;max-width:48px; }
       .kbEnter:active{ background:var(--accent2); }
-
-      /* Padding contenu = hauteur clavier ≈ 185px */
-      .content{ padding-bottom:0;overflow:hidden; }
     }
   </style>
 </head>
@@ -742,6 +779,7 @@
           <button id="btnLogout" class="btn iconBtn" type="button" title="Déconnexion">⏏</button>
           <span id="userChip" class="userChip"></span>
           <button id="btnSettings" class="btn iconBtn" type="button" title="Paramètres">⚙️</button>
+          <button id="btnSolutions" class="btn btnSolutionsTop" type="button" data-mode="rejouer">Jouer</button>
         </div>
         <div class="progressWrap">
           <div class="progLine">
@@ -776,7 +814,6 @@
             spellcheck="false"
             placeholder="Saisie"
           />
-          <button id="btnSolutions" class="btn" type="button" data-mode="rejouer">Jouer</button>
         </div>
         <div class="msg" id="msg"></div>
       </div>
@@ -784,7 +821,6 @@
       <div id="appKeyboard" class="appKeyboard">
         <div class="kbTopBar">
           <span id="kbDisplay" class="kbDisplay"></span>
-          <button id="btnSolutionsKb" class="btn kbPlayBtn" type="button" data-mode="rejouer">Jouer</button>
         </div>
         <div class="kbMsg" id="kbMsg"></div>
         <div class="kbRows">
