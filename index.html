@@ -302,9 +302,11 @@
 
     .slot{
       display:flex;
-      align-items:stretch;
+      align-items:center;
       gap:8px;
       flex:1 1 0;
+      min-height:0;
+      max-height:52px;
     }
 
     .slotMain{
@@ -313,7 +315,8 @@
       border-radius:999px;
       background:var(--slot);
       box-shadow:var(--shadow2);
-      min-height:0;
+      min-height:32px;
+      max-height:52px;
       display:flex;
       overflow:hidden;
       position:relative;
@@ -389,6 +392,8 @@
 
     .toolBtn{
       width:46px;
+      height:38px;
+      flex-shrink:0;
       border-radius:14px;
       border:1px solid var(--toolStroke);
       background:var(--tool);
