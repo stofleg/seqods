@@ -783,6 +783,45 @@
       .kbClear{ background:rgba(181,30,30,.35);color:#ff9a9a; }
       .kbClear:active{ background:var(--danger);color:#fff; }
     }
+
+    /* ══ DESKTOP : tout tient dans 100dvh ══ */
+    @media(min-width:641px){
+      /* Unité de base = 1% de la hauteur viewport */
+      .appHeader{ padding:clamp(4px,0.8vh,12px) 14px clamp(3px,0.6vh,10px);gap:clamp(2px,0.5vh,8px); }
+      .appTitle{ font-size:clamp(16px,2.8vh,32px); }
+      .iconBtn{ padding:clamp(3px,0.5vh,7px) 10px;font-size:clamp(11px,1.6vh,15px); }
+      .userChip{ font-size:clamp(10px,1.4vh,14px);padding:clamp(2px,0.4vh,5px) 10px; }
+      .progLabel{ font-size:clamp(8px,1.1vh,12px); }
+      .bar{ height:clamp(3px,0.5vh,6px); }
+      .progressWrap{ gap:clamp(6px,1vh,14px); }
+
+      .boundBtn{
+        padding:clamp(3px,0.7vh,10px) 12px;
+        font-size:clamp(11px,1.9vh,22px);
+      }
+
+      ol#liste{ gap:0;margin:clamp(1px,0.4vh,6px) 0; }
+      .slot{ max-height:clamp(28px,5.5vh,52px); }
+      .slotMain{ min-height:clamp(24px,4.5vh,40px);max-height:clamp(28px,5.5vh,52px); }
+      .slotWordBtn{
+        padding:clamp(2px,0.4vh,8px) 10px;
+        font-size:clamp(10px,1.8vh,16px);
+      }
+      .slotHint{ font-size:clamp(10px,1.8vh,16px); }
+      .toolBtn{
+        width:clamp(28px,4vh,46px);
+        height:clamp(26px,4vh,38px);
+        font-size:clamp(9px,1.4vh,14px);
+        border-radius:clamp(6px,1vh,14px);
+      }
+
+      .inputCard{ padding:clamp(4px,0.7vh,10px) 10px; }
+      input#saisie{ font-size:clamp(13px,1.8vh,16px);padding:clamp(6px,0.9vh,10px) 12px; }
+      .btn{ font-size:clamp(11px,1.6vh,15px);padding:clamp(5px,0.8vh,10px) clamp(8px,1.2vh,16px); }
+      .msg{ font-size:clamp(10px,1.4vh,13px);min-height:clamp(14px,2vh,20px);margin-top:clamp(3px,0.5vh,8px); }
+
+      .content{ padding:clamp(3px,0.6vh,10px) 8px; }
+    }
   </style>
 </head>
 <body>
@@ -920,7 +959,11 @@
     <div class="panel">
       <div class="panelTop">
         <h2 id="defTitle"></h2>
-        <button id="defClose" class="btn" type="button">Fermer</button>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <a id="btnWiktionary" href="#" target="_blank" rel="noopener" class="btn" style="font-size:12px;padding:5px 10px;text-decoration:none;">Wiktionnaire</a>
+          <a id="btnGoogleImg" href="#" target="_blank" rel="noopener" class="btn" style="font-size:12px;padding:5px 10px;text-decoration:none;">Image</a>
+          <button id="defClose" class="btn" type="button">Fermer</button>
+        </div>
       </div>
       <p id="defBody"></p>
       <div id="anaWrap" style="margin-top:10px; color:var(--muted); font-size:13px; line-height:1.35;">
