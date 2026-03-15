@@ -164,6 +164,7 @@ let seq = null;
 let targets = [];
 let found = new Set();
 let hintMode = Array(10).fill("none");
+let hintUsed = Array(10).fill(false);
 let noHelpRun = true;
 let syncTimer = null;
 let DICT = new Set();  // sera rempli avec D (ODS9 complet) au démarrage
@@ -286,6 +287,7 @@ function saveCurrentRun(){
     seqIndex: currentSeqIndex,
     found: Array.from(found.values()),
     hintMode: Array.isArray(hintMode) ? hintMode.slice() : Array(10).fill("none"),
+    hintUsed: Array.isArray(hintUsed) ? hintUsed.slice() : Array(10).fill(false),
     noHelpRun: !!noHelpRun
   };
   state.updatedAt = Date.now();
@@ -327,6 +329,8 @@ function restoreCurrentRunIfAny(){
   found = new Set(Array.isArray(cr.found) ? cr.found : []);
   hintMode = Array.isArray(cr.hintMode) ? cr.hintMode.slice(0,10) : Array(10).fill("none");
   while(hintMode.length < 10) hintMode.push("none");
+  hintUsed = Array.isArray(cr.hintUsed) ? cr.hintUsed.slice(0,10) : Array(10).fill(false);
+  while(hintUsed.length < 10) hintUsed.push(false);
   noHelpRun = !!cr.noHelpRun;
 
   return true;
@@ -502,6 +506,8 @@ function revealSlot(i, failed=false){
   if(main){
     if(failed){
       main.classList.add("slotFailed");
+    }else if(hintUsed[i]){
+      main.classList.add("slotHinted");
     }else{
       main.classList.add("slotValidated");
     }
@@ -744,7 +750,7 @@ function updateUserChip(){
 }
 function showWaitScreen(){
   chronoStop();
-  seq=null; targets=[]; found=new Set(); hintMode=Array(10).fill("none"); solutionsShown=true;
+  seq=null; targets=[]; found=new Set(); hintMode=Array(10).fill("none"); hintUsed=Array(10).fill(false); solutionsShown=true;
   const borneA=$("#borneA"),borneB=$("#borneB");
   if(borneA){borneA.textContent="—";borneA.onclick=null;}
   if(borneB){borneB.textContent="—";borneB.onclick=null;}
@@ -1047,6 +1053,7 @@ function wire(){
       const which=tool.dataset.tool;
       if(which==="def"){
         markAidUsed();
+        hintUsed[i]=true;
         openDef(targets[i].f || "", "", targets[i].c, false);
         refocusInput();
         return;
@@ -1054,6 +1061,7 @@ function wire(){
       if(which==="len"){
         markAidUsed();
         if(found.has(i)) return;
+        hintUsed[i]=true;
         hintMode[i]=(hintMode[i]==="len")?"none":"len";
         applyHint(i); saveCurrentRun(); scheduleSync(); refocusInput();
         return;
@@ -1062,6 +1070,7 @@ function wire(){
       if(which==="tirage"){
         markAidUsed();
         if(found.has(i)) return;
+        hintUsed[i]=true;
         hintMode[i] = (hintMode[i]==="tirage") ? "none" : "tirage";
         applyHint(i);
         saveCurrentRun();
