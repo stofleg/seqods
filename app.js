@@ -365,6 +365,7 @@ function pickSpecificSequence(seqIndex){
   targets = buildTargetsForSeq(currentSeqIndex) || [];
   found = new Set();
   hintMode = Array(10).fill("none");
+  hintUsed = Array(10).fill(false);
   noHelpRun = true;
   saveCurrentRun();
   scheduleSync();
@@ -399,6 +400,7 @@ function pickAccordingPolicy(forcePlainNew=false){
   }
 
   const seqIndex = pool[Math.floor(Math.random()*pool.length)];
+  hintUsed = Array(10).fill(false);
   return pickSpecificSequence(seqIndex);
 }
 
@@ -1057,7 +1059,7 @@ function wire(){
       if(which==="len"){
         markAidUsed();
         if(found.has(i)) return;
-        hintUsed[i]=true;
+        if(hintMode[i]!=="len") hintUsed[i]=true;
         hintMode[i]=(hintMode[i]==="len")?"none":"len";
         applyHint(i); saveCurrentRun(); scheduleSync(); refocusInput();
         return;
@@ -1066,7 +1068,7 @@ function wire(){
       if(which==="tirage"){
         markAidUsed();
         if(found.has(i)) return;
-        hintUsed[i]=true;
+        if(hintMode[i]!=="tirage") hintUsed[i]=true;
         hintMode[i] = (hintMode[i]==="tirage") ? "none" : "tirage";
         applyHint(i);
         saveCurrentRun();
