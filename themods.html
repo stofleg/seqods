@@ -75,6 +75,8 @@
   .tm-body{flex:1 1 0;min-height:0;overflow-y:auto;padding:14px 16px;-webkit-overflow-scrolling:touch;}
 
   /* ── HOME ── */
+  .tm-home-msg{min-height:18px;}
+  .tm-home-msg.ok{color:var(--ok);}
   .tm-home-subtitle{font-size:14px;color:var(--muted);text-align:center;margin-bottom:20px;}
   .tm-theme-grid{display:flex;flex-direction:column;gap:10px;}
   .tm-theme-card{
@@ -242,27 +244,12 @@
           </div>
           <span class="tm-theme-arrow">›</span>
         </div>
+      <p class="tm-home-msg" style="text-align:center;font-size:13px;font-weight:700;min-height:18px;margin-top:8px;"></p>
       </div>
     </div>
   </div>
   <div style="text-align:center;padding:10px 0;">
     <a href="index.html" style="color:var(--muted);font-size:13px;text-decoration:none;font-weight:700;">← Retour à METHODS</a>
-  </div>
-</div>
-
-<!-- ══ THEME SCREEN ══ -->
-<div id="tm-screen-theme" class="tm-screen" style="display:none;">
-  <div class="tm-card">
-    <div class="tm-header">
-      <div class="tm-nav">
-        <button id="tm-back-home" class="btn iconBtn">←</button>
-        <div class="tm-title"><span class="t1">THE</span><span class="t2">MODS</span></div>
-        <span id="tm-theme-title" style="font-size:16px;font-weight:950;color:var(--accent);letter-spacing:.06em;"></span>
-      </div>
-    </div>
-    <div class="tm-body">
-      <div id="tm-session-list"></div>
-    </div>
   </div>
 </div>
 
