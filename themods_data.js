@@ -981,4 +981,3 @@ window.THEMODS_DATA.ique = [
   {"label":"ZU","words":["ZUTIQUE"]},
   {"label":"ZY","words":["ZYMOTIQUE"]},
 ];
-
