@@ -96,6 +96,7 @@ function getDSet(){
 /* GAME STATE */
 let currentTheme=null, currentSession=null;
 let found=new Set(), solutionsShown=false, noHelpRun=true, kbBuffer="";
+let currentEntryIdx=0, entryFound=new Set(); // pour graphies multiples
 
 function norm(w){
   if(!w) return "";
@@ -109,7 +110,13 @@ function setMsg(txt,cls=""){
 }
 function updateCounter(){
   const el=$("#tm-counter");
-  if(el) el.textContent=found.size+" / "+(currentSession?.words?.length||0);
+  if(!el) return;
+  if(currentTheme==="gm"){
+    const total=(currentSession?.entries||[]).length;
+    el.textContent=found.size+" / "+total;
+  } else {
+    el.textContent=found.size+" / "+(currentSession?.words?.length||0);
+  }
 }
 function showScreen(id){
   ["tm-screen-home","tm-screen-game"].forEach(s=>{
@@ -123,7 +130,7 @@ function showScreen(id){
 function updateHomeStats(){
   const today=todayStr();
   // Pour chaque thème, calculer seen/total/validated
-  const themes=["age","vi","oir","able","ique"];
+  const themes=["age","vi","oir","able","ique","gm"];
   themes.forEach(theme=>{
     const data=window.THEMODS_DATA?.[theme];
     if(!data) return;
@@ -173,6 +180,9 @@ function playSession(theme,session){
   solutionsShown=false;
   noHelpRun=true;
   kbBuffer="";
+  // Pour gm : currentEntryIdx = index dans entries, currentEntryFound = formes trouvées
+  currentEntryIdx=0;
+  entryFound=new Set();
   const st=getSt(theme,session.label);
   st.seen=true; st.lastSeen=todayStr();
   persist().catch(()=>{});
@@ -186,10 +196,10 @@ function playSession(theme,session){
 
 function renderGame(){
   const title=$("#tm-game-title");
-  const _sfx={age:"· · · AGE",vi:"",oir:"· · · OIR",able:"· · · ABLE",ique:"· · · IQUE"};
+  const _sfx={age:"· · · AGE",vi:"",oir:"· · · OIR",able:"· · · ABLE",ique:"· · · IQUE",gm:""};
   if(title) title.textContent=currentSession.label+"— "+(_sfx[currentTheme]||"");
   // Nom de la thématique dans le sous-titre
-  const _names={age:"finale -AGE",vi:"verbes intransitifs",oir:"finale -OIR",able:"finale -ABLE",ique:"finale -IQUE"};
+  const _names={age:"Finale -AGE",vi:"Intransitifs",oir:"Finale -OIR",able:"Finale -ABLE",ique:"Finale -IQUE",gm:"Graphies multiples"};
   const themeName=document.getElementById("tm-theme-name");
   if(themeName) themeName.textContent=_names[currentTheme]||currentTheme;
   const counter=$("#tm-total");
@@ -201,7 +211,13 @@ function renderGame(){
     const li=document.createElement("li");
     li.dataset.idx=i;
     li.className="tm-slot";
-    if(found.has(i)){li.classList.add("tm-found");li.textContent=word;}
+    if(found.has(i)){
+      li.classList.add("tm-found");
+      li.textContent=word;
+      li.style.cursor="pointer";
+      li.addEventListener("mousedown", e=>e.preventDefault());
+      li.addEventListener("click", ()=>openDefForWord(word));
+    }
     list.appendChild(li);
   });
 }
@@ -209,6 +225,12 @@ function renderGame(){
 function validateWord(raw){
   const n=norm(raw);
   if(!n) return;
+
+  if(currentTheme==="gm"){
+    validateWordGM(n);
+    return;
+  }
+
   const matched=[];
   currentSession.words.forEach((w,i)=>{if(!found.has(i)&&norm(w)===n) matched.push(i);});
   if(!matched.length){
@@ -229,6 +251,44 @@ function validateWord(raw){
   updateCounter();
   if(found.size===currentSession.words.length) finalizeSession(noHelpRun);
 }
+
+function validateWordGM(n){
+  const entries=currentSession.entries||[];
+  // Chercher dans quel groupe ce mot apparaît
+  let matchedGroup=-1;
+  entries.forEach((entry,i)=>{
+    if(!found.has(i) && entry.forms.some(f=>norm(f)===n)){
+      matchedGroup=i;
+    }
+  });
+  if(matchedGroup===-1){
+    if(getDSet().has(n)){
+      setMsg("Hors-jeu — mot valide mais pas dans cette liste.","warn");
+    } else {
+      setMsg("Mot inconnu — la partie s'arrête.","err");
+      setTimeout(()=>showSolutions(), 800);
+    }
+    return;
+  }
+  // Ajouter à entryFound, vérifier si toutes les formes sont trouvées
+  if(!entryFound.has(matchedGroup)){
+    entryFound.add(n); // suivi des formes trouvées dans ce groupe
+  }
+  const entry=entries[matchedGroup];
+  const allFound=entry.forms.every(f=>entryFound.has(norm(f)));
+  if(allFound){
+    found.add(matchedGroup);
+    setMsg("Groupe complet ✓","ok");
+  } else {
+    const remaining=entry.forms.filter(f=>!entryFound.has(norm(f)));
+    setMsg("Encore "+remaining.length+" forme"+(remaining.length>1?"s":"")+" à trouver pour ce groupe.","");
+  }
+  renderGameGM();
+  const counter=$("#tm-total");
+  if(counter) counter.textContent=found.size+" / "+entries.length+" groupe"+(entries.length>1?"s":"")+" trouvé"+(found.size>1?"s":"");
+  if(found.size===entries.length) finalize(noHelpRun);
+}
+
 
 function showSolutions(){
   noHelpRun=false;
@@ -296,15 +356,17 @@ function wireKeyboard(){
 
 /* WIRE */
 function wire(){
+  wireDefModal();
   $("#tm-back-home")?.addEventListener("click",renderHome);
   $("#tm-back-theme")?.addEventListener("click",renderHome);
   // Thèmes
   const THEME_LABELS = {
-    age:  {name:"finale -AGE",           hint:"Trouve tous les mots en <strong>-AGE</strong> qui commencent par le préfixe proposé."},
-    vi:   {name:"verbes intransitifs",    hint:"Trouve tous les <strong>verbes intransitifs</strong> (p.p. inv.) qui commencent par le préfixe proposé."},
-    oir:  {name:"finale -OIR",           hint:"Trouve tous les mots en <strong>-OIR</strong> qui commencent par le préfixe proposé."},
-    able: {name:"finale -ABLE",          hint:"Trouve tous les mots en <strong>-ABLE</strong> qui commencent par le préfixe proposé."},
-    ique: {name:"finale -IQUE",          hint:"Trouve tous les mots en <strong>-IQUE</strong> qui commencent par le préfixe proposé."},
+    age:  {name:"Finale -AGE",        hint:"Trouve tous les mots en <strong>-AGE</strong> qui commencent par le préfixe proposé."},
+    vi:   {name:"Intransitifs",        hint:"Trouve tous les <strong>verbes intransitifs</strong> (p.p. inv.) qui commencent par le préfixe proposé."},
+    oir:  {name:"Finale -OIR",        hint:"Trouve tous les mots en <strong>-OIR</strong> qui commencent par le préfixe proposé."},
+    able: {name:"Finale -ABLE",       hint:"Trouve tous les mots en <strong>-ABLE</strong> qui commencent par le préfixe proposé."},
+    ique: {name:"Finale -IQUE",       hint:"Trouve tous les mots en <strong>-IQUE</strong> qui commencent par le préfixe proposé."},
+    gm:   {name:"Graphies multiples", hint:"Trouve toutes les <strong>graphies alternatives</strong> du mot défini."},
   };
   document.querySelectorAll(".tm-theme-card[data-theme]").forEach(card=>{
     card.addEventListener("click",()=>{ currentTheme=card.dataset.theme; playNext(currentTheme); });
