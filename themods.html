@@ -218,6 +218,14 @@
       .tm-card-vi:hover{ background:rgba(183,138,247,.20); }
       .tm-card-vi .tm-theme-label,.tm-card-vi .tm-theme-arrow{ color:#b78af7; }
     }
+    /* ── Modale définition ── */
+    .modal{ display:none; }
+    .modal.open{ display:flex;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center; }
+    .backdrop{ position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px); }
+    .panel{ position:relative;z-index:1;background:var(--card);border:1px solid var(--stroke);border-radius:var(--radius) var(--radius) 0 0;box-shadow:var(--shadow);padding:16px;width:100%;max-width:680px;max-height:80svh;overflow-y:auto; }
+    .panelTop{ display:flex;align-items:flex-start;justify-content:space-between;gap:10px; }
+    .panel h2{ margin:0;font-size:18px;font-weight:950; }
+    .panel p{ margin:10px 0 0;font-size:14px;line-height:1.4;white-space:pre-wrap; }
 </style>
 </head>
 <body>
