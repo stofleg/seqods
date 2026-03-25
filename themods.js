@@ -561,6 +561,12 @@ function renderGameGM(){
 /* ===========================
    GRAPHIES MULTIPLES — mode continu aléatoire
 =========================== */
+function cleanDef(def){
+  if(!def) return def;
+  // Supprimer les parties entre crochets en début : [xxx] ou [xxx-]
+  return def.replace(/^\[[^\]]*\]\s*/,"").trim();
+}
+
 function getAllGMEntries(){
   const data = window.THEMODS_DATA?.gm || [];
   const all = [];
@@ -640,7 +646,7 @@ function renderGMGame(){
     text-align:center;padding:20px 16px 16px;
     font-size:16px;font-weight:800;line-height:1.5;color:var(--txt);
     border-bottom:1px solid var(--stroke);
-  ">${entry.def||"…"}</div>`;
+  ">${cleanDef(entry.def)||"…"}</div>`;
 
   // ── Formes (tuiles) ────────────────────────────────────────────
   html += `<div style="padding:20px 16px;display:flex;flex-direction:column;gap:16px;">`;
