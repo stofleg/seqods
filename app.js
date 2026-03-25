@@ -731,7 +731,7 @@ function showModeSelect(){
       <div class="modeSelectDesc">Trouver les 10 mots entre deux bornes</div>
     </button>
     <button class="modeSelectBtn" id="btnGoThemods">
-      <div class="modeSelectName"><span class="part1">THE</span><span class="part2">MODS</span></div>
+      <div class="modeSelectName"><span class="part1">THEM</span><span class="part2">ODS</span></div>
       <div class="modeSelectDesc">Réviser par thèmes et familles de mots</div>
     </button>`;
   $("#btnGoMethods")?.addEventListener("click",()=>{
@@ -740,8 +740,7 @@ function showModeSelect(){
     showWaitScreen();
   });
   $("#btnGoThemods")?.addEventListener("click",()=>{
-    el.style.display="none";
-    if(window.THEMODS){ window.THEMODS.init(currentUser); window.THEMODS.show(); }
+    window.location.href="themods.html";
   });
 }
 
