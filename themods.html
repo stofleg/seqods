@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8"/>
+<meta name="color-scheme" content="light dark"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <title>THEMODS</title>
 <style>
@@ -70,7 +71,7 @@
   }
   .tm-title{font-size:clamp(22px,5vw,30px);font-weight:950;letter-spacing:.1em;}
   .tm-title .t1{color:var(--title1);}
-  .tm-title .t2{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .tm-title .t2{color:var(--accent);}
   .tm-nav{display:flex;align-items:center;gap:8px;}
   .tm-body{flex:1 1 0;min-height:0;overflow-y:auto;padding:14px 16px;-webkit-overflow-scrolling:touch;}
 
@@ -80,11 +81,10 @@
   .tm-home-subtitle{font-size:14px;color:var(--muted);text-align:center;margin-bottom:20px;}
   .tm-theme-grid{display:flex;flex-direction:column;gap:10px;}
   .tm-theme-card{
-    border:1px solid var(--stroke);border-radius:14px;background:var(--slot);
+    border:1px solid var(--stroke);border-radius:14px;
     padding:16px 18px;cursor:pointer;transition:background .15s;
     display:flex;align-items:center;justify-content:space-between;gap:12px;
   }
-  .tm-theme-card:hover{background:rgba(105,167,255,.1);}
   .tm-theme-label{font-size:22px;font-weight:950;letter-spacing:.08em;color:var(--accent);}
   .tm-theme-desc{font-size:13px;color:var(--muted);margin-top:3px;}
   .tm-theme-arrow{font-size:20px;color:var(--muted);}
@@ -196,6 +196,28 @@
     #tm-screen-game .tm-card{border-radius:0;}
     #tm-screen-game .tm-word-list{overflow-y:auto;}
   }
+
+    /* ── Couleurs des cartes thématiques ── */
+    .tm-card-finale{ background:#e8f0ff; border-color:rgba(26,101,214,.35); }
+    .tm-card-finale:hover{ background:#d4e4ff; }
+    .tm-card-finale .tm-theme-label,.tm-card-finale .tm-theme-arrow{ color:#1a65d6; }
+    .tm-card-gm{ background:#e0f7f5; border-color:rgba(13,110,110,.35); }
+    .tm-card-gm:hover{ background:#c8f0ec; }
+    .tm-card-gm .tm-theme-label,.tm-card-gm .tm-theme-arrow{ color:#0d6e6e; }
+    .tm-card-vi{ background:#f0eaff; border-color:rgba(107,53,194,.35); }
+    .tm-card-vi:hover{ background:#e4d8ff; }
+    .tm-card-vi .tm-theme-label,.tm-card-vi .tm-theme-arrow{ color:#6b35c2; }
+    @media(prefers-color-scheme:dark){
+      .tm-card-finale{ background:rgba(105,167,255,.12);border-color:rgba(105,167,255,.3); }
+      .tm-card-finale:hover{ background:rgba(105,167,255,.22); }
+      .tm-card-finale .tm-theme-label,.tm-card-finale .tm-theme-arrow{ color:#69a7ff; }
+      .tm-card-gm{ background:rgba(45,212,212,.12);border-color:rgba(45,212,212,.3); }
+      .tm-card-gm:hover{ background:rgba(45,212,212,.20); }
+      .tm-card-gm .tm-theme-label,.tm-card-gm .tm-theme-arrow{ color:#2dd4d4; }
+      .tm-card-vi{ background:rgba(183,138,247,.12);border-color:rgba(183,138,247,.3); }
+      .tm-card-vi:hover{ background:rgba(183,138,247,.20); }
+      .tm-card-vi .tm-theme-label,.tm-card-vi .tm-theme-arrow{ color:#b78af7; }
+    }
 </style>
 </head>
 <body>
@@ -204,43 +226,53 @@
 <div id="tm-screen-home" class="tm-screen">
   <div class="tm-card">
     <div class="tm-header">
-      <div class="tm-title"><span class="t1">THE</span><span class="t2">MODS</span></div>
+      <div class="tm-title"><span class="t1">THEM</span><span class="t2">ODS</span></div>
     </div>
     <div class="tm-body">
       <p class="tm-home-subtitle">Thèmes de révision · ODS9</p>
       <div class="tm-theme-grid">
-        <div class="tm-theme-card" data-theme="age">
+        <!-- Finales — ordre alphabétique — couleur bleue -->
+        <div class="tm-theme-card tm-card-finale" data-theme="able">
           <div>
-            <div class="tm-theme-label">-AGE</div>
-            <div class="tm-theme-desc">1 311 mots · 360 sessions</div>
-          </div>
-          <span class="tm-theme-arrow">›</span>
-        </div>
-        <div class="tm-theme-card" data-theme="vi">
-          <div>
-            <div class="tm-theme-label">V.I.</div>
-            <div class="tm-theme-desc">575 verbes intransitifs (p.p. inv.) · 193 sessions</div>
-          </div>
-          <span class="tm-theme-arrow">›</span>
-        </div>
-        <div class="tm-theme-card" data-theme="oir">
-          <div>
-            <div class="tm-theme-label">-OIR</div>
-            <div class="tm-theme-desc">253 mots · 99 sessions</div>
-          </div>
-          <span class="tm-theme-arrow">›</span>
-        </div>
-        <div class="tm-theme-card" data-theme="able">
-          <div>
-            <div class="tm-theme-label">-ABLE</div>
+            <div class="tm-theme-label">Finale -ABLE</div>
             <div class="tm-theme-desc">311 mots · 138 sessions</div>
           </div>
           <span class="tm-theme-arrow">›</span>
         </div>
-        <div class="tm-theme-card" data-theme="ique">
+        <div class="tm-theme-card tm-card-finale" data-theme="age">
           <div>
-            <div class="tm-theme-label">-IQUE</div>
+            <div class="tm-theme-label">Finale -AGE</div>
+            <div class="tm-theme-desc">1 311 mots · 360 sessions</div>
+          </div>
+          <span class="tm-theme-arrow">›</span>
+        </div>
+        <div class="tm-theme-card tm-card-finale" data-theme="ique">
+          <div>
+            <div class="tm-theme-label">Finale -IQUE</div>
             <div class="tm-theme-desc">629 mots · 177 sessions</div>
+          </div>
+          <span class="tm-theme-arrow">›</span>
+        </div>
+        <div class="tm-theme-card tm-card-finale" data-theme="oir">
+          <div>
+            <div class="tm-theme-label">Finale -OIR</div>
+            <div class="tm-theme-desc">253 mots · 99 sessions</div>
+          </div>
+          <span class="tm-theme-arrow">›</span>
+        </div>
+        <!-- Graphies multiples — couleur teal -->
+        <div class="tm-theme-card tm-card-gm" data-theme="gm">
+          <div>
+            <div class="tm-theme-label">Graphies multiples</div>
+            <div class="tm-theme-desc">1 808 groupes · 552 sessions</div>
+          </div>
+          <span class="tm-theme-arrow">›</span>
+        </div>
+        <!-- Intransitifs — couleur violette -->
+        <div class="tm-theme-card tm-card-vi" data-theme="vi">
+          <div>
+            <div class="tm-theme-label">Intransitifs</div>
+            <div class="tm-theme-desc">575 verbes · 193 sessions</div>
           </div>
           <span class="tm-theme-arrow">›</span>
         </div>
@@ -303,6 +335,32 @@
   </div>
 </div>
 
+  <!-- MODALE DÉFINITION -->
+  <div class="modal" id="defModal" role="dialog" aria-modal="true">
+    <div class="backdrop" id="defBackdrop"></div>
+    <div class="panel">
+      <div class="panelTop">
+        <h2 id="defTitle"></h2>
+        <button id="defClose" class="btn" type="button">Fermer</button>
+      </div>
+      <p id="defBody"></p>
+      <div id="defLinks" style="display:flex;gap:8px;margin-top:12px;">
+        <a id="btnWiktionary" href="#" target="_blank" rel="noopener" class="btn" style="font-size:12px;padding:5px 10px;text-decoration:none;background:rgba(79,226,226,.18);border-color:rgba(79,226,226,.4);color:#4fe2e2;">📖 Wiktionnaire</a>
+        <a id="btnGoogleImg" href="#" target="_blank" rel="noopener" class="btn" style="font-size:12px;padding:5px 10px;text-decoration:none;background:rgba(105,167,255,.18);border-color:rgba(105,167,255,.4);color:#69a7ff;">🔍 Image</a>
+      </div>
+      <div id="anaWrap" style="margin-top:10px;color:var(--muted);font-size:13px;line-height:1.35;">
+        <strong style="color:var(--txt);">Anagrammes</strong>
+        <div id="defAna" style="margin-top:6px;"></div>
+      </div>
+      <div id="rallWrap" style="margin-top:10px;color:var(--muted);font-size:13px;line-height:1.35;">
+        <strong style="color:var(--txt);">Rallonges</strong>
+        <div id="defRall" style="margin-top:6px;"></div>
+      </div>
+    </div>
+  </div>
+
+
+<script src="data.js"></script>
 <script src="themods_data.js"></script>
 <script src="themods.js"></script>
 </body>
