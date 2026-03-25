@@ -258,38 +258,39 @@ function validateWord(raw){
 
 function validateWordGM(n){
   const entries=currentSession.entries||[];
-  // Chercher dans quel groupe ce mot apparaît
-  let matchedGroup=-1;
-  entries.forEach((entry,i)=>{
-    if(!found.has(i) && entry.forms.some(f=>norm(f)===n)){
-      matchedGroup=i;
-    }
-  });
-  if(matchedGroup===-1){
+  const entry=entries[currentEntryIdx];
+  if(!entry) return;
+
+  // Le mot correspond-il à une forme de l'entrée courante ?
+  const matchedForm = entry.forms.find(f=>norm(f)===n);
+  if(!matchedForm){
     if(getDSet().has(n)){
       setMsg("Hors-jeu — mot valide mais pas dans cette liste.","warn");
     } else {
-      setMsg("Mot inconnu — la partie s'arrête.","err");
-      setTimeout(()=>showSolutions(), 800);
+      setMsg("Mot non valide.","err");
     }
     return;
   }
-  // Ajouter à entryFound, vérifier si toutes les formes sont trouvées
-  if(!entryFound.has(matchedGroup)){
-    entryFound.add(n); // suivi des formes trouvées dans ce groupe
-  }
-  const entry=entries[matchedGroup];
-  const allFound=entry.forms.every(f=>entryFound.has(norm(f)));
+
+  // Marquer cette forme comme trouvée
+  entryFound.add(n);
+  setMsg("","");
+
+  // Toutes les formes de cette entrée trouvées ?
+  const allFound = entry.forms.every(f=>entryFound.has(norm(f)));
   if(allFound){
-    found.add(matchedGroup);
-    setMsg("Groupe complet ✓","ok");
-  } else {
-    const remaining=entry.forms.filter(f=>!entryFound.has(norm(f)));
-    setMsg("Encore "+remaining.length+" forme"+(remaining.length>1?"s":"")+" à trouver pour ce groupe.","");
+    found.add(currentEntryIdx);
+    // Passer à l'entrée suivante automatiquement
+    if(currentEntryIdx < entries.length-1){
+      currentEntryIdx++;
+      entryFound=new Set();
+      setMsg("✓ Groupe complet — entrée suivante","ok");
+    } else {
+      setMsg("Toutes les entrées trouvées !","ok");
+    }
   }
+
   renderGameGM();
-  const counter=$("#tm-total");
-  if(counter) counter.textContent=found.size+" / "+entries.length+" groupe"+(entries.length>1?"s":"")+" trouvé"+(found.size>1?"s":"");
   if(found.size===entries.length) finalize(noHelpRun);
 }
 
@@ -457,53 +458,97 @@ function chronoStart(){
 /* ===========================
    RENDER GM
 =========================== */
-function renderGameGM(){
-  const entries=currentSession.entries||[];
-  const list=$("#tm-word-list");
-  if(!list) return;
-  list.innerHTML="";
-  entries.forEach((entry,i)=>{
-    const li=document.createElement("li");
-    li.dataset.idx=i;
-    li.className="tm-slot";
-    li.style.cssText="flex-direction:column;align-items:flex-start;padding:8px 14px;min-height:52px;gap:3px;border-radius:12px;";
-    if(found.has(i)){
-      const formsEl=document.createElement("div");
-      formsEl.style.cssText="font-weight:900;font-size:13px;letter-spacing:.06em;";
-      formsEl.textContent=entry.forms.join(" = ");
-      const defEl=document.createElement("div");
-      defEl.style.cssText="font-size:11px;color:var(--muted);font-weight:500;line-height:1.3;";
-      defEl.textContent=entry.def;
-      li.appendChild(formsEl);
-      li.appendChild(defEl);
-      li.classList.add("tm-found");
-      li.style.cursor="pointer";
-      li.addEventListener("click",()=>openDefForWord(entry.forms[0]));
-    } else if(solutionsShown){
-      const formsEl=document.createElement("div");
-      formsEl.style.cssText="font-weight:900;font-size:13px;letter-spacing:.06em;color:var(--muted);";
-      formsEl.textContent=entry.forms.join(" = ");
-      const defEl=document.createElement("div");
-      defEl.style.cssText="font-size:11px;color:var(--muted);font-weight:500;line-height:1.3;";
-      defEl.textContent=entry.def;
-      li.appendChild(formsEl);
-      li.appendChild(defEl);
-      li.classList.add("tm-revealed");
-    } else {
-      const defEl=document.createElement("div");
-      defEl.style.cssText="font-size:12px;color:var(--txt);font-weight:600;line-height:1.3;";
-      defEl.textContent=entry.def||(entry.forms[0][0]+"...");
-      const hintsEl=document.createElement("div");
-      hintsEl.style.cssText="font-size:11px;color:var(--accent);font-weight:700;margin-top:2px;letter-spacing:.04em;";
-      hintsEl.textContent=entry.forms.map(f=>f[0]+"·".repeat(f.replace(/[^A-Za-zÀ-ÿ]/g,"").length-1)).join("  |  ");
-      li.appendChild(defEl);
-      li.appendChild(hintsEl);
-    }
-    list.appendChild(li);
-  });
-  const counter=$("#tm-counter");
-  if(counter) counter.textContent=found.size+" / "+entries.length;
+function letterCount(w){
+  return w.replace(/[^A-Za-zÀ-ÿ]/g,"").length;
 }
+
+function scrabbleTiles(word, revealed){
+  // Retourne le HTML des tuiles : initiale colorée + carrés vides
+  const letters = word.replace(/[^A-Za-zÀ-ÿ]/g,"");
+  const n = letters.length;
+  let html = '<span class="gm-tiles">';
+  if(revealed){
+    for(let i=0;i<n;i++){
+      html += `<span class="gm-tile gm-tile-rev">${letters[i].toUpperCase()}</span>`;
+    }
+  } else {
+    html += `<span class="gm-tile gm-tile-init">${letters[0].toUpperCase()}</span>`;
+    for(let i=1;i<n;i++){
+      html += '<span class="gm-tile gm-tile-empty"></span>';
+    }
+  }
+  html += '</span>';
+  return html;
+}
+
+function renderGameGM(){
+  const entries = currentSession.entries||[];
+  const list = $("#tm-word-list");
+  if(!list) return;
+  list.innerHTML = "";
+
+  // Afficher UNE définition à la fois (currentEntryIdx)
+  // Trouver la première entrée non trouvée
+  let idx = currentEntryIdx;
+  if(idx >= entries.length) idx = entries.length - 1;
+  const entry = entries[idx];
+  if(!entry) return;
+
+  // Trier les formes par longueur croissante
+  const sortedForms = [...entry.forms].sort((a,b)=>letterCount(a)-letterCount(b));
+
+  // ── Bloc définition ──
+  const defBlock = document.createElement("div");
+  defBlock.className = "gm-def-block";
+  defBlock.innerHTML = `<div class="gm-def-text">${entry.def||"…"}</div>`;
+  list.appendChild(defBlock);
+
+  // ── Tuiles pour chaque forme ──
+  const tilesBlock = document.createElement("div");
+  tilesBlock.className = "gm-forms-block";
+
+  sortedForms.forEach(form=>{
+    const normForm = norm(form);
+    const isFound = entryFound.has(normForm);
+    const row = document.createElement("div");
+    row.className = "gm-form-row";
+    row.innerHTML = scrabbleTiles(form, isFound || solutionsShown);
+    if((isFound || solutionsShown) && solutionsShown && !isFound){
+      row.querySelector(".gm-tiles").classList.add("gm-tiles-revealed");
+    }
+    tilesBlock.appendChild(row);
+  });
+  list.appendChild(tilesBlock);
+
+  // ── Navigation entre entrées (si validée ou solutions) ──
+  if(found.has(idx) || solutionsShown){
+    const navBlock = document.createElement("div");
+    navBlock.className = "gm-nav-block";
+    if(idx > 0){
+      const prevBtn = document.createElement("button");
+      prevBtn.className = "btn gm-nav-btn";
+      prevBtn.textContent = "‹ Préc.";
+      prevBtn.addEventListener("click",()=>{ currentEntryIdx=idx-1; renderGameGM(); });
+      navBlock.appendChild(prevBtn);
+    }
+    const posEl = document.createElement("span");
+    posEl.className = "gm-pos";
+    posEl.textContent = (idx+1)+" / "+entries.length;
+    navBlock.appendChild(posEl);
+    if(idx < entries.length-1){
+      const nextBtn = document.createElement("button");
+      nextBtn.className = "btn gm-nav-btn";
+      nextBtn.textContent = "Suiv. ›";
+      nextBtn.addEventListener("click",()=>{ currentEntryIdx=idx+1; renderGameGM(); });
+      navBlock.appendChild(nextBtn);
+    }
+    list.appendChild(navBlock);
+  }
+
+  const counter = $("#tm-counter");
+  if(counter) counter.textContent = found.size+" / "+entries.length;
+}
+
 
 /* WIRE */
 function wire(){
