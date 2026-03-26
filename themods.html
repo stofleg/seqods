@@ -239,32 +239,11 @@
     <div class="tm-body">
       <p class="tm-home-subtitle">Thèmes de révision · ODS9</p>
       <div class="tm-theme-grid">
-        <!-- Finales — ordre alphabétique — couleur bleue -->
-        <div class="tm-theme-card tm-card-finale" data-theme="able">
+        <!-- Finales — carte unique menant au sous-écran -->
+        <div class="tm-theme-card tm-card-finale" id="btn-group-finales">
           <div>
-            <div class="tm-theme-label">Finale -ABLE</div>
-            <div class="tm-theme-desc">311 mots · 138 sessions</div>
-          </div>
-          <span class="tm-theme-arrow">›</span>
-        </div>
-        <div class="tm-theme-card tm-card-finale" data-theme="age">
-          <div>
-            <div class="tm-theme-label">Finale -AGE</div>
-            <div class="tm-theme-desc">1 311 mots · 360 sessions</div>
-          </div>
-          <span class="tm-theme-arrow">›</span>
-        </div>
-        <div class="tm-theme-card tm-card-finale" data-theme="ique">
-          <div>
-            <div class="tm-theme-label">Finale -IQUE</div>
-            <div class="tm-theme-desc">629 mots · 177 sessions</div>
-          </div>
-          <span class="tm-theme-arrow">›</span>
-        </div>
-        <div class="tm-theme-card tm-card-finale" data-theme="oir">
-          <div>
-            <div class="tm-theme-label">Finale -OIR</div>
-            <div class="tm-theme-desc">253 mots · 99 sessions</div>
+            <div class="tm-theme-label">Finales</div>
+            <div class="tm-theme-desc" id="finales-home-desc">4 finales · 2 548 mots</div>
           </div>
           <span class="tm-theme-arrow">›</span>
         </div>
@@ -285,6 +264,56 @@
           <span class="tm-theme-arrow">›</span>
         </div>
       <p class="tm-home-msg" style="text-align:center;font-size:13px;font-weight:700;min-height:18px;margin-top:8px;"></p>
+      </div>
+    </div>
+  </div>
+  <div style="text-align:center;padding:10px 0;">
+    <a href="index.html" style="color:var(--muted);font-size:13px;text-decoration:none;font-weight:700;">← Retour à METHODS</a>
+  </div>
+</div>
+
+
+<!-- ══ FINALES SCREEN ══ -->
+<div id="tm-screen-finales" class="tm-screen" style="display:none;">
+  <div class="tm-card">
+    <div class="tm-header">
+      <div class="tm-nav">
+        <button id="tm-back-finales" class="btn iconBtn">←</button>
+        <div class="tm-title"><span class="t1">THEM</span><span class="t2">ODS</span></div>
+        <span style="font-size:16px;font-weight:950;color:var(--accent);letter-spacing:.06em;">Finales</span>
+      </div>
+    </div>
+    <div class="tm-body">
+      <p class="tm-home-subtitle">Choisir une finale</p>
+      <div class="tm-theme-grid">
+        <div class="tm-theme-card tm-card-finale" data-theme="able">
+          <div>
+            <div class="tm-theme-label">-ABLE</div>
+            <div class="tm-theme-desc" id="able-desc">295 mots · 137 sessions</div>
+          </div>
+          <span class="tm-theme-arrow">›</span>
+        </div>
+        <div class="tm-theme-card tm-card-finale" data-theme="age">
+          <div>
+            <div class="tm-theme-label">-AGE</div>
+            <div class="tm-theme-desc" id="age-desc">1 311 mots · 360 sessions</div>
+          </div>
+          <span class="tm-theme-arrow">›</span>
+        </div>
+        <div class="tm-theme-card tm-card-finale" data-theme="ique">
+          <div>
+            <div class="tm-theme-label">-IQUE</div>
+            <div class="tm-theme-desc" id="ique-desc">629 mots · 177 sessions</div>
+          </div>
+          <span class="tm-theme-arrow">›</span>
+        </div>
+        <div class="tm-theme-card tm-card-finale" data-theme="oir">
+          <div>
+            <div class="tm-theme-label">-OIR</div>
+            <div class="tm-theme-desc" id="oir-desc">253 mots · 99 sessions</div>
+          </div>
+          <span class="tm-theme-arrow">›</span>
+        </div>
       </div>
     </div>
   </div>
@@ -368,8 +397,8 @@
   </div>
 
 
-<script src="data.js?v=2.0"></script>
-<script src="themods_data.js?v=2.0"></script>
-<script src="themods.js?v=2.0"></script>
+<script src="data.js?v=2.1"></script>
+<script src="themods_data.js?v=2.1"></script>
+<script src="themods.js?v=2.1"></script>
 </body>
 </html>
