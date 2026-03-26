@@ -208,10 +208,14 @@ function playSession(theme,session){
 function renderGame(){
   console.log("[THEMODS v1.1] renderGame theme=",currentTheme,"session=",currentSession?.label);
   // Titres communs
-  const _sfx={age:"· · · AGE",vi:"",oir:"· · · OIR",able:"· · · ABLE",ique:"· · · IQUE",gm:""};
+  const _sfx={age:"AGE",vi:"",oir:"OIR",able:"ABLE",ique:"IQUE",gm:""};
   const _names={age:"Finale -AGE",vi:"Intransitifs",oir:"Finale -OIR",able:"Finale -ABLE",ique:"Finale -IQUE",gm:"Graphies multiples"};
   const title=$("#tm-game-title");
-  if(title) title.textContent=(currentTheme==="gm"?"":currentSession.label+"— "+(_sfx[currentTheme]||""));
+  if(title){
+    if(currentTheme==="gm") title.textContent="";
+    else if(_sfx[currentTheme]) title.textContent=currentSession.label+"…"+_sfx[currentTheme];
+    else title.textContent=currentSession.label;
+  }
   const themeName=document.getElementById("tm-theme-name");
   if(themeName) themeName.textContent=_names[currentTheme]||currentTheme;
 
@@ -262,7 +266,15 @@ function validateWord(raw){
   matched.forEach(i=>{
     found.add(i);
     const li=document.querySelector("#tm-word-list li[data-idx='"+i+"']");
-    if(li){li.classList.add("tm-found");li.textContent=currentSession.words[i];li.scrollIntoView({behavior:"smooth",block:"nearest"});}
+    if(li){
+      const word=currentSession.words[i];
+      li.classList.add("tm-found");
+      li.textContent=word;
+      li.style.cursor="pointer";
+      li.addEventListener("mousedown",e=>e.preventDefault());
+      li.addEventListener("click",()=>openDefForWord(word));
+      li.scrollIntoView({behavior:"smooth",block:"nearest"});
+    }
   });
   setMsg("");
   updateCounter();
@@ -322,7 +334,12 @@ function showSolutions(){
     if(!found.has(i)){
       found.add(i);
       const li=document.querySelector("#tm-word-list li[data-idx='"+i+"']");
-      if(li){li.classList.add("tm-revealed");li.textContent=w;}
+      if(li){
+      li.classList.add("tm-revealed");
+      li.textContent=w;
+      li.style.cursor="pointer";
+      li.addEventListener("click",()=>openDefForWord(w));
+    }
     }
   });
   solutionsShown=true;
