@@ -724,6 +724,8 @@ async function persistState(){
 function showModeSelect(){
   const el = $("#modeSelect");
   if(!el) return;
+  // Cacher methodsScreen derrière la sélection
+  const ms=$("#methodsScreen"); if(ms) ms.style.display="none";
   el.style.display = "flex";
   el.innerHTML = `
     <button class="modeSelectBtn" id="btnGoMethods">
@@ -736,7 +738,8 @@ function showModeSelect(){
     </button>`;
   $("#btnGoMethods")?.addEventListener("click",()=>{
     el.style.display="none";
-    $("#methodsScreen").style.display="";
+    el.innerHTML="";
+    const ms=$("#methodsScreen"); if(ms) ms.style.display="flex";
     showWaitScreen();
   });
   $("#btnGoThemods")?.addEventListener("click",()=>{
@@ -757,7 +760,7 @@ function showGameScreen(){
   const g=$("#gameScreen"),a=$("#authScreen");
   if(a) a.style.display="none";
   if(g) g.style.display="";
-  const ms=$("#methodsScreen"); if(ms) ms.style.display="";
+  const ms2=$("#modeSelect"); if(ms2){ ms2.style.display="none"; ms2.innerHTML=""; }
 }
 function setAuthView(v){
   ["login","register","recover"].forEach(n=>{
@@ -1163,8 +1166,9 @@ async function start(){
   const saved=loadSession();
   if(saved&&saved.pseudo){
     currentUser=saved;
-    const ms=$("#modeSelect"); if(ms) ms.style.display="none";
+    const ms=$("#modeSelect"); if(ms){ ms.style.display="none"; ms.innerHTML=""; }
     showGameScreen();
+    const mss=$("#methodsScreen"); if(mss) mss.style.display="flex";
     state=defaultState();
     await loadStateFromFirebase();
     updateUserChip();
