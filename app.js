@@ -4,9 +4,35 @@
    Gère : auth, navigation entre vues, select
 ══════════════════════════════════════════ */
 
+
+/* ── Détection clavier iOS ── */
+function initKeyboardDetection(){
+  if(!window.visualViewport) return;
+  let lastH = window.visualViewport.height;
+  window.visualViewport.addEventListener("resize", ()=>{
+    const h = window.visualViewport.height;
+    const diff = lastH - h;
+    if(diff > 100) document.body.classList.add("kb-open");
+    else if(diff < -50) document.body.classList.remove("kb-open");
+    lastH = h;
+  });
+  document.addEventListener("focusin", e=>{
+    if(e.target.tagName==="INPUT") setTimeout(()=>{
+      if(window.visualViewport.height < window.screen.height * 0.75)
+        document.body.classList.add("kb-open");
+    }, 300);
+  });
+  document.addEventListener("focusout", e=>{
+    if(e.target.tagName==="INPUT") setTimeout(()=>{
+      document.body.classList.remove("kb-open");
+    }, 100);
+  });
+}
+
 async function start(){
   // Charger paramètres
   loadSettings();
+  initKeyboardDetection();
 
   // Wirer la modale définition et les settings
   wireDefModal();
