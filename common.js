@@ -136,6 +136,22 @@ function showView(id){
 }
 
 /* ── Modale définition ── */
+
+/* ── Modale définition simple (indice 📖) ── */
+function openDefSimple(defText){
+  // Nettoyer la prononciation [xxx] en début
+  let d = (defText||"").replace(/^(?:ou\s+)?\[[^\]]*\]\s*/i,"").trim();
+  const tEl=$("#def-title"), bEl=$("#def-body"), mEl=$("#def-modal");
+  if(!tEl||!bEl||!mEl) return;
+  tEl.textContent="Définition";
+  bEl.textContent=d||"(définition absente)";
+  // Masquer les liens et sections extra
+  const linksDiv=$("#def-links"); if(linksDiv) linksDiv.style.display="none";
+  const anaEl=$("#def-ana"); if(anaEl) anaEl.innerHTML="";
+  const rallEl=$("#def-rall"); if(rallEl) rallEl.innerHTML="";
+  mEl.classList.add("open");
+}
+
 function openDef(canon, displayWord){
   const DATA = window.SEQODS_DATA;
   if(!DATA) return;
