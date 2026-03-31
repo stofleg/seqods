@@ -150,8 +150,8 @@ function renderSlots(){
         li.textContent=t.c.split("").sort((a,b)=>a.localeCompare(b,"fr")).join("");
         li.style.cssText="font-style:italic;color:var(--muted);";
       } else if(hintMode[i]==="len"){
-        li.textContent="·".repeat(t.c.length);
-        li.style.cssText="color:var(--muted);letter-spacing:4px;";
+        li.textContent=t.c.length+" lettres";
+        li.style.cssText="color:var(--muted);font-style:italic;";
       }
       // Boutons outils
       const tools=document.createElement("div");
@@ -205,8 +205,13 @@ function buildTargets(s){
 }
 
 function mValidateWord(raw){
-  if(mSolutionsShown) return;
   const n=norm(raw); if(!n) return;
+  // Après solutions : mode vérification libre
+  if(mSolutionsShown){
+    if(!DICT.has(n)) setMethodsMsg("Mot inconnu.","err");
+    else setMethodsMsg(n+" : mot valide ✓","ok");
+    return;
+  }
   const matched=[];
   targets.forEach((t,i)=>{ if(!mFound.has(i)&&norm(t.c)===n) matched.push(i); });
   if(!matched.length){
