@@ -193,6 +193,13 @@ function updateSolutionsBtn(){
     b.classList.toggle("btn-danger",!s);
     b.classList.toggle("btn-primary",s);
   });
+  // Bouton THEMODS : actif seulement si partie terminée
+  const tm=$("#btn-to-themods");
+  if(tm){
+    tm.style.opacity = s ? "1" : "0.35";
+    tm.style.pointerEvents = s ? "" : "none";
+    tm.title = s ? "" : "Termine la partie avant de basculer vers THEMODS";
+  }
 }
 
 /* ── Jeu ── */
@@ -267,7 +274,8 @@ function startMethodsGame(idx){
   buildTargets(seq);
   renderBounds(); renderSlots();
   const c=$("#compteur"); if(c) c.textContent="0/10";
-  updateSolutionsBtn(); computeStats(); chronoStart();
+  updateSolutionsBtn(); computeStats();
+  chronoStart();
   setMethodsMsg("");
   setTimeout(()=>{ if(window.matchMedia("(pointer:fine)").matches) $("#saisie")?.focus(); },80);
 }
