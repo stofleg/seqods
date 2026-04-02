@@ -126,12 +126,18 @@ function computeStats(){
 
 /* ── Rendu ── */
 function renderBounds(){
-  if(!seq) return;
-  const ea=E[seq.startIdx]?.split(",")[0]||C[seq.startIdx];
-  const eb=E[seq.endIdx]?.split(",")[0]||C[seq.endIdx];
   const ba=$("#borne-a"), bb=$("#borne-b");
-  if(ba){ ba.textContent=ea; ba.onclick=()=>openDef(C[seq.startIdx],ea); }
-  if(bb){ bb.textContent=eb; bb.onclick=()=>openDef(C[seq.endIdx],eb); }
+  if(!seq || mPhase==="WAITING"){
+    // Masquer les bornes avant le lancement
+    if(ba){ ba.textContent="—"; ba.onclick=null; }
+    if(bb){ bb.textContent="—"; bb.onclick=null; }
+    return;
+  }
+  // Forme complète avec genre : "SEYANT, E" ou "SEYANT"
+  const ea=E[seq.startIdx]||C[seq.startIdx];
+  const eb=E[seq.endIdx]||C[seq.endIdx];
+  if(ba){ ba.textContent=ea; ba.onclick=()=>openDef(C[seq.startIdx],ea.split(",")[0].trim()); }
+  if(bb){ bb.textContent=eb; bb.onclick=()=>openDef(C[seq.endIdx],eb.split(",")[0].trim()); }
 }
 
 function renderSlots(){
@@ -272,6 +278,7 @@ function launchGame(){
   mPhase="PLAYING";
   updateBtn();
   setMethodsMsg("");
+  renderBounds(); // Révéler les bornes au lancement
   chronoStart();
   setTimeout(()=>{ if(window.matchMedia("(pointer:fine)").matches) $("#saisie")?.focus(); },80);
 }
