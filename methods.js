@@ -1,6 +1,8 @@
 "use strict";
 /* ══════════════════════════════════════════
    METHODS.JS
+   Principe : 10 mots à trouver entre deux bornes alphabétiques.
+   États : WAITING (prêt, bouton Jouer) → PLAYING (chrono actif) → DONE (solutions affichées)
 ══════════════════════════════════════════ */
 
 const DATA = window.SEQODS_DATA || {};
@@ -26,8 +28,8 @@ let mFound = new Set();
 let hintMode = Array(10).fill("none");
 let hintUsed = Array(10).fill(false);
 let mNoHelp = true;
-let mSolutionsShown = true;
-let mGameStarted = false;
+// WAITING = prêt mais pas démarré | PLAYING = en cours | DONE = terminé
+let mPhase = "DONE"; // DONE au départ = bouton "Jouer"
 let mKb = null;
 let mInited = false;
 
@@ -76,12 +78,11 @@ let chronoRem = 0;
 
 function chronoStop(){
   if(chronoInterval){ clearInterval(chronoInterval); chronoInterval=null; }
-  const el=$("#chrono"); if(el) el.className="chrono";
 }
 function chronoStart(){
   chronoStop();
   const el = $("#chrono"); if(!el) return;
-  if(!settings.chronoEnabled){ el.textContent=""; return; }
+  if(!settings.chronoEnabled){ el.textContent=""; el.className="chrono"; return; }
   chronoRem = settings.chronoDur*60;
   el.textContent = chronoFmt(chronoRem);
   el.className = "chrono running";
@@ -91,11 +92,21 @@ function chronoStart(){
     if(chronoRem===0){
       el.className="chrono expired";
       chronoStop();
-      if(!mSolutionsShown) mShowSolutions();
+      if(mPhase==="PLAYING") mShowSolutions();
     }
   },1000);
 }
 function chronoFmt(s){ return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0"); }
+function chronoReset(){
+  chronoStop();
+  const el=$("#chrono"); if(!el) return;
+  if(settings.chronoEnabled){
+    el.textContent=chronoFmt(settings.chronoDur*60);
+    el.className="chrono";
+  } else {
+    el.textContent=""; el.className="chrono";
+  }
+}
 
 /* ── Stats ── */
 function computeStats(){
@@ -106,7 +117,7 @@ function computeStats(){
     if(s?.seen) seen++;
     if(s?.validated) val++;
   }
-  const row = $("#m-prog-row"); if(!row) return;
+  const row=$("#m-prog-row"); if(!row) return;
   const sp=Math.round(seen/TOTAL_SEQ*100), vp=Math.round(val/TOTAL_SEQ*100);
   row.innerHTML=`
     <div class="prog"><label><span>Listes vues</span><span>${seen}/${TOTAL_SEQ}</span></label><div class="prog-bar"><div class="prog-fill" style="width:${sp}%"></div></div></div>
@@ -133,6 +144,7 @@ function renderSlots(){
     li.className="slot";
 
     if(mFound.has(i)){
+      // Trouvé : vert sans aide, orange avec aide
       li.classList.add(hintUsed[i]?"found-helped":"found","clickable");
       const word=E[t.eIdx]?.split(",")[0]||t.c;
       const btn=document.createElement("button");
@@ -140,13 +152,16 @@ function renderSlots(){
       btn.textContent=word;
       btn.addEventListener("click",e=>{e.preventDefault();openDef(t.c,word);});
       li.appendChild(btn);
-    } else if(mSolutionsShown){
+
+    } else if(mPhase==="DONE"){
+      // Solutions affichées : rouge pour les mots non trouvés
       li.classList.add("revealed","clickable");
       const word=E[t.eIdx]?.split(",")[0]||t.c;
       li.textContent=word;
       li.addEventListener("click",()=>openDef(t.c,word));
+
     } else {
-      // Indices
+      // WAITING ou PLAYING : slot vide avec indices possibles
       if(hintMode[i]==="tirage"){
         li.textContent=t.c.split("").sort((a,b)=>a.localeCompare(b,"fr")).join("");
         li.style.cssText="font-style:italic;color:var(--muted);";
@@ -154,31 +169,51 @@ function renderSlots(){
         li.textContent=t.c.length+" lettres";
         li.style.cssText="color:var(--muted);font-style:italic;";
       }
-      // Boutons outils
-      const tools=document.createElement("div");
-      tools.className="slot-tools";
-      if(settings.showAbc){
-        const b=document.createElement("button"); b.className="tool-btn"; b.textContent="ABC";
-        b.addEventListener("mousedown",e=>e.preventDefault());
-        b.addEventListener("click",()=>{ mNoHelp=false; hintUsed[i]=true; hintMode[i]=(hintMode[i]==="tirage")?"none":"tirage"; renderSlots(); persistMethodsState().catch(()=>{}); });
-        tools.appendChild(b);
+      // Boutons outils (seulement en PLAYING)
+      if(mPhase==="PLAYING"){
+        const tools=document.createElement("div");
+        tools.className="slot-tools";
+        if(settings.showAbc){
+          const b=document.createElement("button"); b.className="tool-btn"; b.textContent="ABC";
+          b.addEventListener("mousedown",e=>e.preventDefault());
+          b.addEventListener("click",()=>{
+            mNoHelp=false; hintUsed[i]=true;
+            hintMode[i]=(hintMode[i]==="tirage")?"none":"tirage";
+            renderSlots(); refocusSaisie(); persistMethodsState().catch(()=>{});
+          });
+          tools.appendChild(b);
+        }
+        if(settings.showDef){
+          const b=document.createElement("button"); b.className="tool-btn"; b.textContent="📖";
+          b.addEventListener("mousedown",e=>e.preventDefault());
+          b.addEventListener("click",()=>{
+            mNoHelp=false; hintUsed[i]=true;
+            // Définition simple : uniquement la def, sans prononciation ni liens
+            const raw=(F[t.eIdx]||"").replace(/^(?:ou\s+)?\[[^\]]*\]\s*/i,"").trim();
+            openDefSimple(raw||t.c);
+            refocusSaisie();
+          });
+          tools.appendChild(b);
+        }
+        if(settings.showLen){
+          const b=document.createElement("button"); b.className="tool-btn"; b.textContent="123";
+          b.addEventListener("mousedown",e=>e.preventDefault());
+          b.addEventListener("click",()=>{
+            mNoHelp=false; hintUsed[i]=true;
+            hintMode[i]=(hintMode[i]==="len")?"none":"len";
+            renderSlots(); refocusSaisie(); persistMethodsState().catch(()=>{});
+          });
+          tools.appendChild(b);
+        }
+        if(tools.children.length) li.appendChild(tools);
       }
-      if(settings.showDef){
-        const b=document.createElement("button"); b.className="tool-btn"; b.textContent="📖";
-        b.addEventListener("mousedown",e=>e.preventDefault());
-        b.addEventListener("click",()=>{ mNoHelp=false; hintUsed[i]=true; openDef(t.c,""); });
-        tools.appendChild(b);
-      }
-      if(settings.showLen){
-        const b=document.createElement("button"); b.className="tool-btn"; b.textContent="123";
-        b.addEventListener("mousedown",e=>e.preventDefault());
-        b.addEventListener("click",()=>{ mNoHelp=false; hintUsed[i]=true; hintMode[i]=(hintMode[i]==="len")?"none":"len"; renderSlots(); persistMethodsState().catch(()=>{}); });
-        tools.appendChild(b);
-      }
-      if(tools.children.length) li.appendChild(tools);
     }
     list.appendChild(li);
   }
+}
+
+function refocusSaisie(){
+  if(window.matchMedia("(pointer:fine)").matches) setTimeout(()=>$("#saisie")?.focus(),50);
 }
 
 function setMethodsMsg(t,c){
@@ -186,24 +221,29 @@ function setMethodsMsg(t,c){
   if(mKb) mKb.setMsg(t,c);
 }
 
-function updateSolutionsBtn(){
-  const s=mSolutionsShown;
+function updateBtn(){
+  const isDone = mPhase==="DONE";
+  const isWaiting = mPhase==="WAITING";
   [$("#btn-solutions"),$("#btn-solutions-kb")].forEach(b=>{
     if(!b) return;
-    b.textContent=s?"Jouer":"Solutions";
-    b.classList.toggle("btn-danger",!s);
-    b.classList.toggle("btn-primary",s);
+    if(isDone||isWaiting){
+      b.textContent="Jouer";
+      b.classList.remove("btn-danger"); b.classList.add("btn-primary");
+    } else {
+      b.textContent="Solutions";
+      b.classList.add("btn-danger"); b.classList.remove("btn-primary");
+    }
   });
-  // Bouton THEMODS : actif seulement si partie terminée
+  // THEMODS : désactivé pendant une partie
   const tm=$("#btn-to-themods");
   if(tm){
-    tm.style.opacity = s ? "1" : "0.35";
-    tm.style.pointerEvents = s ? "" : "none";
-    tm.title = s ? "" : "Termine la partie avant de basculer vers THEMODS";
+    const canLeave = mPhase!=="PLAYING";
+    tm.style.opacity = canLeave ? "1" : "0.35";
+    tm.style.pointerEvents = canLeave ? "" : "none";
   }
 }
 
-/* ── Jeu ── */
+/* ── Flux de jeu ── */
 function buildTargets(s){
   targets=[];
   for(let i=1;i<=10;i++){
@@ -212,13 +252,43 @@ function buildTargets(s){
   }
 }
 
+// Charger la prochaine liste et attendre le clic Jouer
+function prepareGame(idx){
+  seq={...sequences[idx], seqIndex:idx};
+  mFound=new Set(); hintMode=Array(10).fill("none"); hintUsed=Array(10).fill(false);
+  mNoHelp=true; mPhase="WAITING";
+  buildTargets(seq);
+  renderBounds();
+  renderSlots();
+  const c=$("#compteur"); if(c) c.textContent="0/10";
+  chronoReset();
+  updateBtn();
+  computeStats();
+  setMethodsMsg("Prêt — appuie sur Jouer pour commencer.","");
+}
+
+// Lancer la partie (au clic Jouer depuis WAITING)
+function launchGame(){
+  mPhase="PLAYING";
+  updateBtn();
+  setMethodsMsg("");
+  chronoStart();
+  setTimeout(()=>{ if(window.matchMedia("(pointer:fine)").matches) $("#saisie")?.focus(); },80);
+}
+
+function methodsReplay(){
+  const idx=pickNext();
+  if(idx===null){ setMethodsMsg("Toutes les listes sont à jour !","ok"); return; }
+  prepareGame(idx);
+}
+
 function mValidateWord(raw){
   const n=norm(raw); if(!n) return;
-  if(!mGameStarted){ mGameStarted=true; startMethodsGame(); }
-  // Après solutions : mode vérification libre
-  if(mSolutionsShown){
-    if(!DICT.has(n)) setMethodsMsg("Mot inconnu.","err");
-    else setMethodsMsg(n+" : mot valide ✓","ok");
+  // En WAITING : démarrer la partie au premier mot tapé
+  if(mPhase==="WAITING") launchGame();
+  // En DONE : mode vérification libre
+  if(mPhase==="DONE"){
+    setMethodsMsg(DICT.has(n)?n+" : mot valide ✓":"Mot inconnu.","ok");
     return;
   }
   const matched=[];
@@ -237,7 +307,7 @@ function mValidateWord(raw){
 
 function mShowSolutions(){
   chronoStop();
-  mSolutionsShown=true;
+  mPhase="DONE";
   targets.forEach((_,i)=>{ if(!mFound.has(i)) mFound.add(i); });
   renderSlots();
   const c=$("#compteur"); if(c) c.textContent="10/10";
@@ -246,8 +316,8 @@ function mShowSolutions(){
 
 function mFinalizeList(ok){
   chronoStop();
-  mSolutionsShown=true;
-  updateSolutionsBtn();
+  mPhase="DONE";
+  updateBtn();
   const s=ensureListState(seq.seqIndex);
   s.seen=true; s.lastSeen=todayStr();
   if(ok){
@@ -263,46 +333,14 @@ function mFinalizeList(ok){
   persistMethodsState().catch(()=>{});
 }
 
-function methodsReplay(){
-  const idx=pickNext();
-  if(idx===null){ setMethodsMsg("Toutes les listes sont à jour !","ok"); return; }
-  prepareGame(idx);
-}
-
-// Phase 1 : prépare la liste, affiche JOUER — PAS de chrono
-function prepareGame(idx){
-  seq={...sequences[idx], seqIndex:idx};
-  mFound=new Set(); hintMode=Array(10).fill("none"); hintUsed=Array(10).fill(false);
-  mNoHelp=true; mSolutionsShown=true; mGameStarted=false; // true = affiche "JOUER"
-  buildTargets(seq);
-  renderBounds(); renderSlots();
-  const c=$("#compteur"); if(c) c.textContent="0/10";
-  // Chrono : afficher 00:00 statique sans démarrer
-  const el=$("#chrono");
-  if(el){
-    el.textContent=settings.chronoEnabled ? chronoFmt(settings.chronoDur*60) : "";
-    el.className="chrono";
-  }
-  updateSolutionsBtn(); computeStats();
-  setMethodsMsg("");
-}
-
-// Phase 2 : démarre le jeu et le chrono (au clic Jouer)
-function startMethodsGame(){
-  mSolutionsShown=false;
-  updateSolutionsBtn();
-  chronoStart();
-  setTimeout(()=>{ if(window.matchMedia("(pointer:fine)").matches) $("#saisie")?.focus(); },80);
-}
-
-/* ── Init (une seule fois) ── */
+/* ── Init ── */
 function initMethods(){
   if(mInited){ computeStats(); methodsReplay(); return; }
   mInited=true;
 
   if(DICT.size===0) DICT = D.length>0 ? new Set(D) : new Set(C.map(w=>norm(w)));
 
-  mKb = wireKeyboard("m-kb","m-kb-disp","m-kb-msg", w=>{ mValidateWord(w); });
+  mKb = wireKeyboard("m-kb","m-kb-disp","m-kb-msg", w=>mValidateWord(w));
 
   $("#saisie")?.addEventListener("keydown", e=>{
     if(e.key==="Enter"&&!e.isComposing){
@@ -312,21 +350,25 @@ function initMethods(){
     }
   });
 
-  const onSol=()=>{
-    if(!mGameStarted && mSolutionsShown && seq){
-      // Première fois : lancer la partie
-      startMethodsGame();
-      mGameStarted=true;
-    } else if(mSolutionsShown){
-      // Partie terminée : charger suivante
-      methodsReplay();
-    } else {
-      // En cours : afficher solutions
-      mShowSolutions();
-    }
+  $("#btn-solutions")?.addEventListener("click", ()=>{
+    if(mPhase==="WAITING"||mPhase==="DONE") { prepareGame(pickNext()) || launchGame(); }
+    else mShowSolutions();
+  });
+  // Logique précise du bouton
+  const onBtn=()=>{
+    if(mPhase==="WAITING") launchGame();
+    else if(mPhase==="DONE") methodsReplay();
+    else mShowSolutions();
   };
-  $("#btn-solutions")?.addEventListener("click", onSol);
-  $("#btn-solutions-kb")?.addEventListener("click", onSol);
+  // Retirer les listeners précédents et en ajouter un seul propre
+  ["btn-solutions","btn-solutions-kb"].forEach(id=>{
+    const b=document.getElementById(id);
+    if(b){
+      const nb=b.cloneNode(true);
+      b.parentNode.replaceChild(nb,b);
+      nb.addEventListener("click",onBtn);
+    }
+  });
 
   computeStats();
   methodsReplay();
