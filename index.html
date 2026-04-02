@@ -190,8 +190,8 @@ input[type=range]{accent-color:var(--accent);}
 #v-themods{flex-direction:column;}
 .tm-outer{flex:1;display:flex;flex-direction:column;overflow:hidden;margin:8px;}
 /* sous-vues THEMODS */
-.tmv{display:none;flex:1;flex-direction:column;overflow:hidden;}
-.tmv.active{display:flex;}
+.tmv{display:none;}
+.tmv.active{display:flex;flex:1;flex-direction:column;overflow:hidden;background:var(--card);border:1px solid var(--stroke);border-radius:var(--radius);box-shadow:var(--shadow);}
 .tm-card{flex:1;display:flex;flex-direction:column;overflow:hidden;}
 .tm-hdr{padding:9px 14px 8px;border-bottom:1px solid var(--stroke);
   display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;}
@@ -323,8 +323,8 @@ body.kb-open .tm-hdr .prog-row{ display:none; }
 .gm-nav{padding:10px 16px;border-top:1px solid var(--stroke);display:flex;align-items:center;justify-content:space-between;gap:12px;}
 .gm-pos{font-size:12px;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums;}
 /* sous-vues THEMODS */
-.tmv{display:none;flex:1;flex-direction:column;overflow:hidden;}
-.tmv.active{display:flex;}
+.tmv{display:none;}
+.tmv.active{display:flex;flex:1;flex-direction:column;overflow:hidden;background:var(--card);border:1px solid var(--stroke);border-radius:var(--radius);box-shadow:var(--shadow);}
 .tm-outer{flex:1;display:flex;flex-direction:column;overflow:hidden;}
 .tm-card{flex:1;display:flex;flex-direction:column;overflow:hidden;}
 /* METHODS layout */
@@ -468,7 +468,7 @@ body.kb-open .slot{min-height:28px;font-size:12px;}
 <div id="v-themods" class="view">
   <div class="card tm-outer">
     <!-- sous-vue : accueil -->
-    <div id="tv-home" class="tmv tm-card active">
+    <div id="tv-home" class="tmv active">
       <div class="tm-hdr">
         <div class="tm-nav">
           <div class="logo"><span class="l1">THEM</span><span class="l2">ODS</span></div>
@@ -496,7 +496,7 @@ body.kb-open .slot{min-height:28px;font-size:12px;}
       </div>
     </div>
     <!-- sous-vue : finales -->
-    <div id="tv-finales" class="tmv tm-card">
+    <div id="tv-finales" class="tmv">
       <div class="tm-hdr">
         <div class="tm-nav">
           <button id="btn-back-finales" class="btn" style="font-size:14px;padding:5px 9px;">←</button>
@@ -514,7 +514,7 @@ body.kb-open .slot{min-height:28px;font-size:12px;}
       </div>
     </div>
     <!-- sous-vue : jeu -->
-    <div id="tv-game" class="tmv tm-card">
+    <div id="tv-game" class="tmv">
       <div class="tm-ghdr">
         <div class="tm-ginfo">
           <div id="tm-gtitle" class="tm-gtitle"></div>
