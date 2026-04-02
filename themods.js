@@ -233,9 +233,12 @@ function finalizeTm(ok){
 }
 
 function updateTmBtn(){
-  const btns=[document.getElementById("tm-btn-sol"),document.getElementById("tm-btn-sol-kb")];
+  const sol=document.getElementById("tm-btn-sol");
+  const solKb=document.getElementById("tm-btn-sol-kb");
   const isGM=tmTheme==="gm";
-  btns.forEach(b=>{
+
+  // Pour GM : pas de bouton Solutions (navigation via "Entrée suivante" dans la liste)
+  [sol,solKb].forEach(b=>{
     if(!b) return;
     if(isGM){ b.style.display="none"; return; }
     b.style.display="";
