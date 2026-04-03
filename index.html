@@ -85,13 +85,13 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;}
 .kb-rows{display:flex;flex-direction:column;gap:4px;}
 .kb-row{display:flex;justify-content:center;gap:3px;}
 .kk{flex:1;max-width:33px;height:34px;border-radius:7px;border:0;
-  background:#2d3a55;color:#eaf0ff;font-size:13px;font-weight:700;
+  background:#2d3a55;color:#eaf0ff;font-size:16px;font-weight:700;
   display:flex;align-items:center;justify-content:center;
   box-shadow:0 2px 0 rgba(0,0,0,.4);user-select:none;-webkit-user-select:none;
   transition:background .08s,transform .08s;}
 @media(prefers-color-scheme:light){.kk{background:#fff;color:#0b1220;box-shadow:0 2px 0 rgba(0,0,0,.18);}}
 .kk:active{background:var(--accent);color:#fff;transform:translateY(1px);box-shadow:none;}
-.kk.wide{max-width:48px;font-size:11px;}
+.kk.wide{max-width:48px;font-size:14px;}
 .kk.enter{background:var(--accent);color:#fff;}
 .kk.clr{background:rgba(192,57,43,.35);color:#ffaaaa;}
 
@@ -402,6 +402,28 @@ body.kb-open .slot{min-height:28px;font-size:12px;}
 /* Sur les vues centrées (auth, select) le padding-top pousse le contenu vers le bas */
 #v-auth, #v-select{
   padding-top: max(20px, env(safe-area-inset-top, 20px));
+}
+
+/* Slots courts (< 10 lettres) : pas de bordure pointillée */
+.slot-short{
+  border-color: transparent !important;
+  background: transparent !important;
+}
+.slot-short.found, .slot-short.found-helped, .slot-short.revealed{
+  border-color: inherit !important;
+  background: inherit !important;
+}
+
+/* THEMODS : pas de pointillés sur les slots */
+#v-themods .slot{
+  border-color: transparent;
+  background: transparent;
+}
+#v-themods .slot.found,
+#v-themods .slot.found-helped,
+#v-themods .slot.revealed{
+  border-color: inherit;
+  background: inherit;
 }
 </style>
 </head>
