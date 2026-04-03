@@ -357,24 +357,14 @@ function initMethods(){
     }
   });
 
-  $("#btn-solutions")?.addEventListener("click", ()=>{
-    if(mPhase==="WAITING"||mPhase==="DONE") { prepareGame(pickNext()) || launchGame(); }
-    else mShowSolutions();
-  });
-  // Logique précise du bouton
   const onBtn=()=>{
-    if(mPhase==="WAITING") launchGame();
-    else if(mPhase==="DONE") methodsReplay();
-    else mShowSolutions();
+    if(mPhase==="PLAYING"){ mShowSolutions(); return; }
+    if(mPhase==="DONE") methodsReplay(); // charge la liste suivante → WAITING
+    launchGame(); // lance immédiatement (WAITING → PLAYING)
   };
-  // Retirer les listeners précédents et en ajouter un seul propre
   ["btn-solutions","btn-solutions-kb"].forEach(id=>{
     const b=document.getElementById(id);
-    if(b){
-      const nb=b.cloneNode(true);
-      b.parentNode.replaceChild(nb,b);
-      nb.addEventListener("click",onBtn);
-    }
+    if(b){ b.addEventListener("click",onBtn); }
   });
 
   computeStats();

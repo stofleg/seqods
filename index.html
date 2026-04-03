@@ -407,8 +407,11 @@ body.kb-open .slot{min-height:28px;font-size:12px;}
 /* Slots courts (< 10 lettres) : trait plein au lieu de pointillé */
 .slot-short{ border-style: solid; }
 
-/* THEMODS : trait plein au lieu de pointillé (les couleurs found/revealed restent globales) */
+/* THEMODS : trait plein + couleurs explicites (spécificité ID force les overrides) */
 #v-themods .slot{ border-style: solid; }
+#v-themods .slot.found{ border-color:rgba(45,212,212,.7);background:rgba(45,212,212,.18); }
+#v-themods .slot.found-helped{ border-color:rgba(255,167,50,.8);background:rgba(255,167,50,.2); }
+#v-themods .slot.revealed{ border-color:rgba(255,107,107,.7);background:rgba(255,107,107,.18); }
 </style>
 </head>
 <body>
