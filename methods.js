@@ -315,7 +315,6 @@ function mValidateWord(raw){
 function mShowSolutions(){
   chronoStop();
   mPhase="DONE";
-  targets.forEach((_,i)=>{ if(!mFound.has(i)) mFound.add(i); });
   renderSlots();
   const c=$("#compteur"); if(c) c.textContent="10/10";
   mFinalizeList(false);
