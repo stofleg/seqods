@@ -295,13 +295,13 @@ function mValidateWord(raw){
   if(mPhase==="WAITING") launchGame();
   // En DONE : mode vérification libre
   if(mPhase==="DONE"){
-    setMethodsMsg(DICT.has(n)?n+" : mot valide ✓":"Mot inconnu.","ok");
+    setMethodsMsg(DICT.has(n)?n+" : mot valide ✓":"« "+raw+" » — mot inconnu.","ok");
     return;
   }
   const matched=[];
   targets.forEach((t,i)=>{ if(!mFound.has(i)&&norm(t.c)===n) matched.push(i); });
   if(!matched.length){
-    setMethodsMsg(DICT.has(n)?"Hors-jeu.":"Mot inconnu.", DICT.has(n)?"warn":"err");
+    setMethodsMsg(DICT.has(n)?"Hors-jeu.":"« "+raw+" » — mot inconnu.", DICT.has(n)?"warn":"err");
     return;
   }
   matched.forEach(i=>mFound.add(i));
