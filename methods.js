@@ -136,8 +136,8 @@ function renderBounds(){
   // Forme complète avec genre : "SEYANT, E" ou "SEYANT"
   const ea=E[seq.startIdx]||C[seq.startIdx];
   const eb=E[seq.endIdx]||C[seq.endIdx];
-  if(ba){ ba.textContent=ea; ba.onclick=()=>openDef(C[seq.startIdx],ea.split(",")[0].trim()); }
-  if(bb){ bb.textContent=eb; bb.onclick=()=>openDef(C[seq.endIdx],eb.split(",")[0].trim()); }
+  if(ba){ ba.textContent=ea; ba.onclick=()=>openDef(C[seq.startIdx],ea); }
+  if(bb){ bb.textContent=eb; bb.onclick=()=>openDef(C[seq.endIdx],eb); }
 }
 
 function renderSlots(){
@@ -152,7 +152,7 @@ function renderSlots(){
     if(mFound.has(i)){
       // Trouvé : vert sans aide, orange avec aide
       li.classList.add(hintUsed[i]?"found-helped":"found","clickable");
-      const word=E[t.eIdx]?.split(",")[0]||t.c;
+      const word=E[t.eIdx]||t.c;
       const btn=document.createElement("button");
       btn.style.cssText="background:none;border:none;font:inherit;color:inherit;font-weight:900;letter-spacing:.07em;cursor:pointer;padding:0;flex:1;text-align:left;";
       btn.textContent=word;
@@ -162,7 +162,7 @@ function renderSlots(){
     } else if(mPhase==="DONE"){
       // Solutions affichées : rouge pour les mots non trouvés
       li.classList.add("revealed","clickable");
-      const word=E[t.eIdx]?.split(",")[0]||t.c;
+      const word=E[t.eIdx]||t.c;
       li.textContent=word;
       li.addEventListener("click",()=>openDef(t.c,word));
 
