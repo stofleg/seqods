@@ -232,6 +232,11 @@ function finalizeTm(ok){
   persistThemods().catch(()=>{});
 }
 
+function isGMResolved(){
+  const entry=currentGMEntry(); if(!entry) return false;
+  return tmSolutions||entry.forms.every(f=>gmFound.has(norm(f)));
+}
+
 function updateTmBtn(){
   const sol=document.getElementById("tm-btn-sol");
   const solKb=document.getElementById("tm-btn-sol-kb");
@@ -240,10 +245,12 @@ function updateTmBtn(){
   [sol,solKb].forEach(b=>{
     if(!b) return;
     if(isGM){
-      // GM : Solutions visible avant résolution, masqué après
-      if(tmSolutions){ b.style.display="none"; return; }
       b.style.display="";
-      b.textContent="Solutions"; b.classList.add("btn-danger"); b.classList.remove("btn-primary");
+      if(isGMResolved()){
+        b.textContent="Jouer"; b.classList.remove("btn-danger"); b.classList.add("btn-primary");
+      } else {
+        b.textContent="Solutions"; b.classList.add("btn-danger"); b.classList.remove("btn-primary");
+      }
       return;
     }
     b.style.display="";
@@ -317,6 +324,8 @@ function renderGMGame(){
   const entry=currentGMEntry();
   const list=document.getElementById("tm-wlist"); if(!list) return;
   list.innerHTML="";
+  const counter=document.getElementById("tm-counter");
+  if(counter) counter.textContent=entry?(gmEntryIdx+1)+" / "+all.length:"";
   if(!entry){ setTmMsg("Toutes les entrées terminées !","ok"); return; }
 
   const sortedForms=[...entry.forms].sort((a,b)=>letterCount(a)-letterCount(b));
@@ -344,23 +353,6 @@ function renderGMGame(){
     tilesDiv.appendChild(row);
   });
   list.appendChild(tilesDiv);
-
-  if(allFormsFound||tmSolutions){
-    const nav=document.createElement("div"); nav.className="gm-nav";
-    const pos=document.createElement("span"); pos.className="gm-pos";
-    pos.textContent=(gmEntryIdx+1)+" / "+all.length;
-    nav.appendChild(pos);
-    const nextBtn=document.createElement("button"); nextBtn.className="btn btn-primary";
-    nextBtn.textContent="Entrée suivante →";
-    nextBtn.addEventListener("click",()=>{
-      gmEntryIdx++; prog.idx=gmEntryIdx;
-      gmFound=new Set(); tmSolutions=false;
-      updateTmBtn(); setTmMsg(""); renderGMGame();
-      persistThemods().catch(()=>{});
-    });
-    nav.appendChild(nextBtn);
-    list.appendChild(nav);
-  }
 }
 
 function validateGMWord(n){
@@ -394,12 +386,22 @@ function initThemods(){
       }
     });
 
-    document.getElementById("tm-btn-sol")?.addEventListener("click",()=>{
-      tmSolutions ? playTheme(tmTheme) : showTmSolutions();
-    });
-    document.getElementById("tm-btn-sol-kb")?.addEventListener("click",()=>{
-      tmSolutions ? playTheme(tmTheme) : showTmSolutions();
-    });
+    const onSolBtn=()=>{
+      if(tmTheme==="gm"){
+        if(isGMResolved()){
+          const prog=getGMProgress();
+          gmEntryIdx++; prog.idx=gmEntryIdx;
+          gmFound=new Set(); tmSolutions=false;
+          updateTmBtn(); setTmMsg(""); renderGMGame();
+          if(tmKb) tmKb.clear();
+          persistThemods().catch(()=>{});
+        } else { showTmSolutions(); }
+      } else {
+        tmSolutions ? playTheme(tmTheme) : showTmSolutions();
+      }
+    };
+    document.getElementById("tm-btn-sol")?.addEventListener("click", onSolBtn);
+    document.getElementById("tm-btn-sol-kb")?.addEventListener("click", onSolBtn);
 
     document.getElementById("btn-back-game")?.addEventListener("click",()=>renderTmHome());
     document.getElementById("btn-back-game-kb")?.addEventListener("click",()=>renderTmHome());
