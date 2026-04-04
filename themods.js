@@ -404,7 +404,6 @@ function initThemods(){
     document.getElementById("tm-btn-sol-kb")?.addEventListener("click", onSolBtn);
 
     document.getElementById("btn-back-game")?.addEventListener("click",()=>renderTmHome());
-    document.getElementById("btn-back-game-kb")?.addEventListener("click",()=>renderTmHome());
     document.getElementById("btn-finales")?.addEventListener("click",()=>renderTmFinales());
     document.getElementById("btn-back-finales")?.addEventListener("click",()=>renderTmHome());
 
