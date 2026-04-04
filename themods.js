@@ -218,6 +218,7 @@ function finalizeTm(ok){
   tmSolutions=true;
   updateTmBtn();
   const s=getSt(tmTheme, tmSession?.label||"");
+  s.seen=true; s.lastSeen=todayStr();
   if(ok){
     s.validated=true; s.lastResult="ok";
     s.interval=nextInterval(s.interval||1); s.due=addDays(todayStr(),s.interval);
@@ -367,6 +368,7 @@ function validateGMWord(n){
     persistThemods().catch(()=>{});
   }
   renderGMGame();
+  updateTmBtn();
 }
 
 /* ── Init (une seule fois) ── */
