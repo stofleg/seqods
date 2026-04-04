@@ -142,9 +142,6 @@ function playTheme(theme){
 
 function startSession(theme, session){
   tmSession=session; tmFound=new Set(); tmSolutions=false; tmNoHelp=true;
-  getSt(theme, session.label).seen=true;
-  getSt(theme, session.label).lastSeen=todayStr();
-  persistThemods().catch(()=>{});
   showTmView("tv-game");
   renderTmGame();
   updateTmBtn();
