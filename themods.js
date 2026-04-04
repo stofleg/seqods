@@ -143,8 +143,8 @@ function renderTmGame(){
 
   const el=id=>document.getElementById(id);
   const sfx=THEME_SFX[tmTheme];
-  if(el("tm-gtitle")) el("tm-gtitle").textContent=sess.label+(sfx?"…"+sfx:"");
-  if(el("tm-gtheme")) el("tm-gtheme").textContent=THEME_NAMES[tmTheme]||tmTheme;
+  if(el("tm-gtitle")) el("tm-gtitle").textContent=THEME_NAMES[tmTheme]||tmTheme;
+  if(el("tm-gtheme")) el("tm-gtheme").textContent=sess.label+(sfx?"…"+sfx:"…");
   if(el("tm-gtotal")) el("tm-gtotal").textContent=sess.words.length+" mot"+(sess.words.length>1?"s":"")+" à trouver";
   if(el("tm-counter")) el("tm-counter").textContent=tmFound.size+" / "+sess.words.length;
 
