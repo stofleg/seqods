@@ -162,10 +162,9 @@ input[type=range]{accent-color:var(--accent);}
 /* ══ METHODS ══ */
 #v-methods{flex-direction:column;}
 .m-card{flex:1;display:flex;flex-direction:column;overflow:hidden;margin:8px;}
-.m-hdr{padding:7px 12px;border-bottom:1px solid var(--stroke);
-  display:flex;align-items:center;gap:8px;flex-shrink:0;}
-.m-hdr .logo{font-size:18px;}
-.user-bar{display:flex;align-items:center;gap:6px;margin-left:auto;}
+.m-hdr,.tm-shdr{display:flex;align-items:center;gap:6px;padding:7px 12px;
+  border-bottom:1px solid var(--stroke);flex-shrink:0;}
+.m-hdr-logo,.tm-hdr-logo{flex:1;text-align:center;font-size:18px;}
 .user-chip{font-size:11px;font-weight:700;color:var(--muted);padding:3px 8px;
   border-radius:20px;border:1px solid var(--stroke);}
 .m-prog{padding:5px 12px 4px;border-bottom:1px solid var(--stroke);flex-shrink:0;}
@@ -330,9 +329,8 @@ body.kb-open .tm-hdr .prog-row{ display:none; }
 .tm-card{flex:1;display:flex;flex-direction:column;overflow:hidden;}
 /* METHODS layout */
 .m-card{flex:1;display:flex;flex-direction:column;overflow:hidden;margin:8px;}
-.m-hdr{padding:7px 12px;border-bottom:1px solid var(--stroke);display:flex;align-items:center;gap:8px;flex-shrink:0;}
-.m-hdr .logo{font-size:18px;}
-.user-bar{display:flex;align-items:center;gap:6px;margin-left:auto;}
+.m-hdr,.tm-shdr{display:flex;align-items:center;gap:6px;padding:7px 12px;border-bottom:1px solid var(--stroke);flex-shrink:0;}
+.m-hdr-logo,.tm-hdr-logo{flex:1;text-align:center;font-size:18px;}
 .user-chip{font-size:11px;font-weight:700;color:var(--muted);padding:3px 8px;border-radius:20px;border:1px solid var(--stroke);}
 .m-prog{padding:5px 12px 4px;border-bottom:1px solid var(--stroke);flex-shrink:0;}
 .bounds-row{display:flex;align-items:center;padding:5px 12px;border-bottom:1px solid var(--stroke);flex-shrink:0;gap:6px;}
@@ -463,13 +461,11 @@ body.kb-open .slot{min-height:28px;font-size:12px;}
 <div id="v-methods" class="view">
   <div class="card m-card">
     <div class="m-hdr">
-      <div class="logo"><span class="l1">METH</span><span class="l2">ODS</span></div>
-      <div class="user-bar">
-        <button id="btn-settings" class="btn" style="padding:5px 9px;font-size:14px;">⚙️</button>
-        <span id="user-chip" class="user-chip"></span>
-        <button id="btn-to-themods" class="btn" style="font-size:11px;font-weight:900;padding:5px 9px;letter-spacing:.04em;"><span class="l1">THEM</span><span class="l2">ODS</span></button>
-        <button id="btn-logout" class="btn" style="padding:5px 9px;font-size:14px;">⏏</button>
-      </div>
+      <span id="user-chip" class="user-chip"></span>
+      <button id="btn-logout" class="btn" style="padding:5px 9px;font-size:14px;">⏏</button>
+      <div class="logo m-hdr-logo"><span class="l1">METH</span><span class="l2">ODS</span></div>
+      <button id="btn-to-themods" class="btn" style="font-size:11px;font-weight:900;padding:5px 9px;letter-spacing:.04em;"><span class="l1">THEM</span><span class="l2">ODS</span></button>
+      <button id="btn-settings" class="btn" style="padding:5px 9px;font-size:14px;">⚙️</button>
     </div>
     <div class="m-prog"><div id="m-prog-row" class="prog-row"></div></div>
     <div class="bounds-row">
@@ -504,14 +500,18 @@ body.kb-open .slot{min-height:28px;font-size:12px;}
 <!-- ══ THEMODS ══ -->
 <div id="v-themods" class="view">
   <div class="card tm-outer">
+    <!-- header partagé THEMODS -->
+    <div class="tm-shdr">
+      <span id="tm-user-chip" class="user-chip"></span>
+      <button id="btn-tm-logout" class="btn" style="padding:5px 9px;font-size:14px;">⏏</button>
+      <div class="logo tm-hdr-logo"><span class="l1">THEM</span><span class="l2">ODS</span></div>
+      <button id="btn-tm-back" class="btn" style="font-size:11px;font-weight:900;padding:5px 9px;letter-spacing:.04em;"><span class="l1">METH</span><span class="l2">ODS</span></button>
+      <button id="btn-tm-settings" class="btn" style="padding:5px 9px;font-size:14px;">⚙️</button>
+    </div>
     <!-- sous-vue : accueil -->
     <div id="tv-home" class="tmv active">
       <div class="tm-hdr">
-        <div class="tm-nav">
-          <div class="logo"><span class="l1">THEM</span><span class="l2">ODS</span></div>
-          <button id="btn-tm-back" class="btn" style="margin-left:auto;font-size:11px;padding:5px 9px;">← METHODS</button>
-        </div>
-        <div id="tm-prog-row" class="prog-row" style="width:100%;max-width:320px;margin-top:4px;"></div>
+        <div id="tm-prog-row" class="prog-row" style="width:100%;max-width:320px;"></div>
       </div>
       <div class="tm-body">
         <p class="tm-subtitle">Thèmes de révision · ODS9</p>
@@ -537,7 +537,6 @@ body.kb-open .slot{min-height:28px;font-size:12px;}
       <div class="tm-hdr">
         <div class="tm-nav">
           <button id="btn-back-finales" class="btn" style="font-size:14px;padding:5px 9px;">←</button>
-          <div class="logo"><span class="l1">THEM</span><span class="l2">ODS</span></div>
           <span class="tm-nav-title">Finales</span>
         </div>
       </div>

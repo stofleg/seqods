@@ -112,8 +112,10 @@ function initAuth(){
 /* ── Après login ── */
 async function afterLogin(){
   await Promise.all([loadMethodsState(), loadThemodsState()]);
-  const chip=document.getElementById("user-chip");
-  if(chip) chip.textContent=currentUser.pseudo;
+  ["user-chip","tm-user-chip"].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.textContent=currentUser.pseudo;
+  });
   showView("v-select");
   // interval auto-persist
   setInterval(()=>{ persistMethodsState().catch(()=>{}); persistThemods().catch(()=>{}); }, 60000);
@@ -145,13 +147,12 @@ function initNav(){
     // Pas besoin de re-init METHODS, juste reprendre
     computeStats();
   });
-  // Déconnexion
-  document.getElementById("btn-logout")?.addEventListener("click", ()=>{
-    chronoStop();
-    clearSession();
-    currentUser=null;
-    showView("v-auth");
-  });
+  // Déconnexion (METHODS + THEMODS)
+  const doLogout=()=>{ chronoStop(); clearSession(); currentUser=null; showView("v-auth"); };
+  document.getElementById("btn-logout")?.addEventListener("click", doLogout);
+  document.getElementById("btn-tm-logout")?.addEventListener("click", doLogout);
+  // Settings THEMODS (placeholder — panneau vide pour l'instant)
+  document.getElementById("btn-tm-settings")?.addEventListener("click", ()=>{});
   // F1
   document.addEventListener("keydown", e=>{
     if(e.key==="F1"){
