@@ -142,6 +142,7 @@ function playTheme(theme){
 
 function startSession(theme, session){
   tmSession=session; tmFound=new Set(); tmSolutions=false; tmNoHelp=true;
+  const edBtn=document.getElementById("gm-ed-btn"); if(edBtn) edBtn.style.display="none";
   showTmView("tv-game");
   renderTmGame();
   updateTmBtn();
@@ -289,6 +290,92 @@ function tmReplay(){
   else renderTmHome();
 }
 
+/* ── GM éditeur ── */
+let gmEdPendingImg = undefined; // undefined=inchangé, null=effacé, string=nouvelle image
+
+function gmEntryKey(entry){
+  return entry.forms.slice().map(f=>norm(f)).sort().join("|");
+}
+function gmGetCustom(entry){
+  return tmState.themes?.gm?._custom?.[gmEntryKey(entry)] || {};
+}
+function gmSetCustom(entry, data){
+  if(!tmState.themes) tmState.themes={};
+  if(!tmState.themes.gm) tmState.themes.gm={};
+  if(!tmState.themes.gm._custom) tmState.themes.gm._custom={};
+  const k=gmEntryKey(entry);
+  const prev=tmState.themes.gm._custom[k]||{};
+  tmState.themes.gm._custom[k]={...prev,...data};
+  persistThemods().catch(()=>{});
+}
+
+function openGMEditor(){
+  const entry=currentGMEntry(); if(!entry) return;
+  const custom=gmGetCustom(entry);
+  gmEdPendingImg=undefined;
+  const defEl=document.getElementById("gm-ed-def");
+  const imgEl=document.getElementById("gm-ed-img");
+  const imgWrap=document.getElementById("gm-ed-img-wrap");
+  const delBtn=document.getElementById("gm-ed-del-img");
+  if(defEl) defEl.value=custom.def!==undefined?custom.def:(cleanDef(entry.def)||"");
+  if(imgEl) imgEl.src=custom.img||"";
+  if(imgWrap) imgWrap.style.display=custom.img?"":"none";
+  if(delBtn) delBtn.style.display=custom.img?"":"none";
+  document.getElementById("gm-editor").style.display="";
+  setTimeout(()=>defEl?.focus(),80);
+}
+function closeGMEditor(){
+  document.getElementById("gm-editor").style.display="none";
+  gmEdPendingImg=undefined;
+}
+function saveGMEditor(){
+  const entry=currentGMEntry(); if(!entry) return;
+  const defEl=document.getElementById("gm-ed-def");
+  const data={};
+  if(defEl) data.def=defEl.value.trim();
+  if(gmEdPendingImg!==undefined) data.img=gmEdPendingImg; // null=effacé
+  gmSetCustom(entry, data);
+  closeGMEditor();
+  renderGMGame();
+}
+async function pasteGMImage(){
+  try{
+    const items=await navigator.clipboard.read();
+    for(const item of items){
+      const imgType=item.types.find(t=>t.startsWith("image/"));
+      if(imgType){
+        const blob=await item.getType(imgType);
+        const dataUrl=await resizeGMImage(blob,500);
+        gmEdPendingImg=dataUrl;
+        const imgEl=document.getElementById("gm-ed-img");
+        const imgWrap=document.getElementById("gm-ed-img-wrap");
+        const delBtn=document.getElementById("gm-ed-del-img");
+        if(imgEl) imgEl.src=dataUrl;
+        if(imgWrap) imgWrap.style.display="";
+        if(delBtn) delBtn.style.display="";
+        return;
+      }
+    }
+    setTmMsg("Aucune image dans le presse-papier.","warn");
+  }catch(e){
+    setTmMsg("Accès presse-papier refusé.","err");
+  }
+}
+function resizeGMImage(blob, maxW){
+  return new Promise(resolve=>{
+    const img=new Image(), url=URL.createObjectURL(blob);
+    img.onload=()=>{
+      URL.revokeObjectURL(url);
+      const scale=Math.min(1,maxW/img.width);
+      const c=document.createElement("canvas");
+      c.width=Math.round(img.width*scale); c.height=Math.round(img.height*scale);
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+      resolve(c.toDataURL("image/jpeg",0.75));
+    };
+    img.src=url;
+  });
+}
+
 /* ── Graphies multiples ── */
 function getAllGMEntries(){
   const all=[];
@@ -326,6 +413,7 @@ function startGM(){
   }
   gmEntryIdx=prog.idx; gmFound=new Set(); tmSolutions=false; tmNoHelp=true;
   showTmView("tv-game");
+  const edBtn=document.getElementById("gm-ed-btn"); if(edBtn) edBtn.style.display="";
   document.getElementById("tm-gtitle").textContent="Graphies multiples";
   const lbl=document.getElementById("tm-session-label"); if(lbl) lbl.textContent="";
   updateTmBtn(); setTmMsg(""); renderGMGame();
@@ -345,9 +433,23 @@ function renderGMGame(){
   const sortedForms=[...entry.forms].sort((a,b)=>letterCount(a)-letterCount(b));
   const allFormsFound=sortedForms.every(f=>gmFound.has(norm(f)));
 
+  const custom=gmGetCustom(entry);
   const defDiv=document.createElement("div");
   defDiv.className="gm-def";
-  defDiv.textContent=cleanDef(entry.def)||"…";
+  if(custom.img){
+    const img=document.createElement("img");
+    img.src=custom.img; img.alt="";
+    img.style.cssText="max-width:100%;max-height:180px;border-radius:8px;display:block;margin:0 auto 10px;object-fit:contain;";
+    defDiv.appendChild(img);
+  }
+  const defText=document.createElement("span");
+  defText.textContent=(custom.def!==undefined?custom.def:cleanDef(entry.def))||"…";
+  if(custom.def!==undefined||custom.img){
+    const mark=document.createElement("span");
+    mark.textContent=" ✎"; mark.style.cssText="font-size:10px;opacity:.45;";
+    defText.appendChild(mark);
+  }
+  defDiv.appendChild(defText);
   list.appendChild(defDiv);
 
   const tilesDiv=document.createElement("div");
@@ -419,6 +521,29 @@ function initThemods(){
     document.getElementById("tm-btn-sol-kb")?.addEventListener("click", onSolBtn);
 
     document.getElementById("btn-back-game")?.addEventListener("click",()=>renderTmHome());
+
+    // GM éditeur
+    document.getElementById("gm-ed-btn")?.addEventListener("click",()=>openGMEditor());
+    document.getElementById("gm-ed-close")?.addEventListener("click",()=>closeGMEditor());
+    document.getElementById("gm-ed-cancel")?.addEventListener("click",()=>closeGMEditor());
+    document.getElementById("gm-ed-save")?.addEventListener("click",()=>saveGMEditor());
+    document.getElementById("gm-ed-paste")?.addEventListener("click",()=>pasteGMImage());
+    document.getElementById("gm-ed-del-img")?.addEventListener("click",()=>{
+      gmEdPendingImg=null;
+      const imgWrap=document.getElementById("gm-ed-img-wrap");
+      const delBtn=document.getElementById("gm-ed-del-img");
+      if(imgWrap) imgWrap.style.display="none";
+      if(delBtn) delBtn.style.display="none";
+    });
+    document.getElementById("gm-ed-search")?.addEventListener("click",()=>{
+      const entry=currentGMEntry(); if(!entry) return;
+      const word=entry.forms[0].replace(/[Œœ]/g,"oe").replace(/[Ææ]/g,"ae");
+      window.open("https://www.google.com/search?q="+encodeURIComponent(word)+"&tbm=isch","_blank","noopener");
+    });
+    // Fermer en cliquant sur l'overlay (hors panneau)
+    document.getElementById("gm-editor")?.addEventListener("click",e=>{
+      if(e.target===document.getElementById("gm-editor")) closeGMEditor();
+    });
     document.getElementById("btn-finales")?.addEventListener("click",()=>renderTmFinales());
     document.getElementById("btn-back-finales")?.addEventListener("click",()=>renderTmHome());
 

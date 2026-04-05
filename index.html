@@ -394,6 +394,16 @@ body.kb-open .slot{min-height:28px;font-size:12px;}
 .gm-row{ flex-wrap:nowrap; }
 .gt{ flex-shrink:1; }
 
+/* ── GM Éditeur ── */
+#gm-editor{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;padding-bottom:env(safe-area-inset-bottom,0px);}
+.gm-ed-panel{width:100%;max-height:85vh;overflow-y:auto;background:var(--card);border-radius:18px 18px 0 0;padding:18px 16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 -4px 24px rgba(0,0,0,.3);}
+.gm-ed-hdr{display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.gm-ed-title{font-size:15px;font-weight:800;}
+.gm-ed-textarea{width:100%;border-radius:10px;border:1px solid var(--stroke);background:rgba(255,255,255,.07);color:var(--txt);font-size:14px;padding:10px;font-family:inherit;resize:vertical;box-sizing:border-box;min-height:72px;outline:none;}
+@media(prefers-color-scheme:light){.gm-ed-textarea{background:rgba(255,255,255,.8);}}
+.gm-ed-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.gm-ed-footer{display:flex;gap:10px;}
+
 /* ══ PWA / Safe Area (notch iPhone) ══ */
 /* Les vues couvrent tout l'écran (position:fixed;inset:0)
    On compense le notch avec du padding sur chaque vue */
@@ -576,6 +586,7 @@ body.kb-open .slot{min-height:28px;font-size:12px;}
     <div id="tv-game" class="tmv">
       <div class="tm-ghdr">
         <div id="tm-gtitle" class="tm-gtitle" style="flex:1;"></div>
+        <button id="gm-ed-btn" class="btn" style="display:none;font-size:14px;padding:5px 8px;" title="Modifier l'entrée">✏️</button>
         <button id="tm-btn-sol" class="btn btn-danger" style="font-size:12px;padding:6px 12px;">Solutions</button>
         <button id="btn-back-game" class="btn" style="font-size:12px;padding:6px 12px;white-space:nowrap;">← Thèmes</button>
       </div>
@@ -584,6 +595,28 @@ body.kb-open .slot{min-height:28px;font-size:12px;}
       <div id="tm-msg" class="msg" style="padding:3px 12px;min-height:20px;"></div>
       <div class="inp-bar">
         <input id="tm-saisie" type="text" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="Saisie…"/>
+      </div>
+      <!-- Éditeur GM -->
+      <div id="gm-editor" style="display:none;" role="dialog" aria-modal="true">
+        <div class="gm-ed-panel">
+          <div class="gm-ed-hdr">
+            <span class="gm-ed-title">Modifier l'entrée</span>
+            <button id="gm-ed-close" class="btn" style="padding:4px 10px;font-size:17px;line-height:1;">×</button>
+          </div>
+          <textarea id="gm-ed-def" class="gm-ed-textarea" rows="3" placeholder="Définition…"></textarea>
+          <div id="gm-ed-img-wrap" style="display:none;">
+            <img id="gm-ed-img" src="" alt="" style="max-width:100%;max-height:200px;border-radius:8px;display:block;margin:0 auto;object-fit:contain;"/>
+          </div>
+          <div class="gm-ed-actions">
+            <button id="gm-ed-search" class="btn" style="font-size:13px;">🔍 Google Images</button>
+            <button id="gm-ed-paste" class="btn" style="font-size:13px;">📋 Coller l'image</button>
+            <button id="gm-ed-del-img" class="btn btn-danger" style="font-size:13px;display:none;">Effacer l'image</button>
+          </div>
+          <div class="gm-ed-footer">
+            <button id="gm-ed-cancel" class="btn" style="flex:1;padding:10px;">Annuler</button>
+            <button id="gm-ed-save" class="btn btn-primary" style="flex:1;padding:10px;font-weight:800;">Sauvegarder</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -641,11 +674,11 @@ body.kb-open .slot{min-height:28px;font-size:12px;}
   </div>
 </div>
 
-<script src="data.js?v=3.4"></script>
-<script src="themods_data.js?v=3.4"></script>
-<script src="common.js?v=3.4"></script>
-<script src="methods.js?v=3.4"></script>
-<script src="themods.js?v=3.4"></script>
-<script src="app.js?v=3.4"></script>
+<script src="data.js?v=3.5"></script>
+<script src="themods_data.js?v=3.5"></script>
+<script src="common.js?v=3.5"></script>
+<script src="methods.js?v=3.5"></script>
+<script src="themods.js?v=3.5"></script>
+<script src="app.js?v=3.5"></script>
 </body>
 </html>
