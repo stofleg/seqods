@@ -170,7 +170,7 @@ function openDef(canon, displayWord){
   const C=DATA.c, E=DATA.e, F=DATA.f, A=DATA.a, R=DATA.r;
 
   const idx = C.indexOf(canon);
-  const title = displayWord || (idx>=0 ? E[idx].split(",")[0].trim() : canon);
+  const title = (displayWord || (idx>=0 ? E[idx].split(",")[0].trim() : canon)).replace(/\*/g,"");
   const def = idx>=0 ? (F[idx]||"") : "";
 
   $("#def-title").textContent = title;
