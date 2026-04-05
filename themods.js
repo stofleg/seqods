@@ -316,7 +316,7 @@ function cleanDef(d){
   d=d.replace(/^(?:ou\s+)?\[[^\]]*\]\s*/i,"").replace(/^\([^)]*\)\s*/,"");
   return d.startsWith("->") ? "" : d.trim();
 }
-function letterCount(w){ return w.replace(/[^A-Za-zÀ-ÿ]/g,"").length; }
+function letterCount(w){ return w.replace(/[Œœ]/g,"OE").replace(/[Ææ]/g,"AE").replace(/[^A-Za-zÀ-ÿ]/g,"").length; }
 
 function startGM(){
   const all=getAllGMEntries(), prog=getGMProgress();
@@ -355,7 +355,7 @@ function renderGMGame(){
   sortedForms.forEach(form=>{
     const isFound=gmFound.has(norm(form))||allFormsFound;
     const revealed=isFound||tmSolutions;
-    const letters=form.replace(/[^A-Za-zÀ-ÿ]/g,"");
+    const letters=form.replace(/[Œœ]/g,"OE").replace(/[Ææ]/g,"AE").replace(/[^A-Za-zÀ-ÿ]/g,"").toUpperCase();
     const row=document.createElement("div"); row.className="gm-row";
     for(let i=0;i<letters.length;i++){
       const t=document.createElement("span");
