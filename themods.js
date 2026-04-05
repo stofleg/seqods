@@ -333,7 +333,15 @@ function saveGMEditor(){
   const defEl=document.getElementById("gm-ed-def");
   const data={};
   if(defEl) data.def=defEl.value.trim();
-  if(gmEdPendingImg!==undefined) data.img=gmEdPendingImg; // null=effacé
+  if(gmEdPendingImg!==undefined){
+    // Supprimer l'ancienne image Storage si elle est remplacée/effacée
+    const prev=gmGetCustom(entry).img;
+    if(prev&&prev.includes("firebasestorage")){
+      const pathMatch=prev.match(/\/o\/([^?]+)/);
+      if(pathMatch) fbStorageDelete(decodeURIComponent(pathMatch[1])).catch(()=>{});
+    }
+    data.img=gmEdPendingImg; // null=effacé, string=URL Storage
+  }
   gmSetCustom(entry, data);
   closeGMEditor();
   renderGMGame();
@@ -345,14 +353,30 @@ async function pasteGMImage(){
       const imgType=item.types.find(t=>t.startsWith("image/"));
       if(imgType){
         const blob=await item.getType(imgType);
-        const dataUrl=await resizeGMImage(blob,500);
-        gmEdPendingImg=dataUrl;
+        const jpegBlob=await resizeGMImage(blob,500);
+        // Aperçu immédiat
+        const previewUrl=URL.createObjectURL(jpegBlob);
         const imgEl=document.getElementById("gm-ed-img");
         const imgWrap=document.getElementById("gm-ed-img-wrap");
         const delBtn=document.getElementById("gm-ed-del-img");
-        if(imgEl) imgEl.src=dataUrl;
+        if(imgEl) imgEl.src=previewUrl;
         if(imgWrap) imgWrap.style.display="";
         if(delBtn) delBtn.style.display="";
+        // Upload Firebase Storage
+        setTmMsg("Envoi…","warn");
+        const entry=currentGMEntry(); if(!entry) return;
+        const path=`gmimages/${currentUser?.pseudo||"guest"}/${gmEntryKey(entry)}.jpg`;
+        try{
+          const storageUrl=await fbStorageUpload(path, jpegBlob);
+          gmEdPendingImg=storageUrl;
+          URL.revokeObjectURL(previewUrl);
+          if(imgEl) imgEl.src=storageUrl;
+          setTmMsg("Image ajoutée.","ok");
+        }catch(e){
+          setTmMsg("Erreur upload : "+e.message,"err");
+          gmEdPendingImg=null; // annule
+          if(imgWrap) imgWrap.style.display="none";
+        }
         return;
       }
     }
@@ -370,7 +394,7 @@ function resizeGMImage(blob, maxW){
       const c=document.createElement("canvas");
       c.width=Math.round(img.width*scale); c.height=Math.round(img.height*scale);
       c.getContext("2d").drawImage(img,0,0,c.width,c.height);
-      resolve(c.toDataURL("image/jpeg",0.75));
+      c.toBlob(b=>resolve(b),"image/jpeg",0.75);
     };
     img.src=url;
   });

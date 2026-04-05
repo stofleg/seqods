@@ -7,7 +7,19 @@
 const $ = s => document.querySelector(s);
 
 /* ── Firebase ── */
-const FB_BASE = "https://firestore.googleapis.com/v1/projects/methods-8e4b1/databases/(default)/documents";
+const FB_BASE    = "https://firestore.googleapis.com/v1/projects/methods-8e4b1/databases/(default)/documents";
+const FB_STORAGE = "https://firebasestorage.googleapis.com/v0/b/methods-8e4b1.appspot.com/o";
+
+async function fbStorageUpload(path, blob){
+  const r = await fetch(`${FB_STORAGE}?uploadType=media&name=${encodeURIComponent(path)}`,
+    {method:"POST", headers:{"Content-Type":"image/jpeg"}, body:blob});
+  if(!r.ok) throw new Error("Storage " + r.status);
+  const {downloadTokens} = await r.json();
+  return `${FB_STORAGE}/${encodeURIComponent(path)}?alt=media&token=${downloadTokens}`;
+}
+async function fbStorageDelete(path){
+  await fetch(`${FB_STORAGE}/${encodeURIComponent(path)}`, {method:"DELETE"}).catch(()=>{});
+}
 
 function _cv_to(val){
   if(val===null||val===undefined) return {nullValue:null};
