@@ -111,7 +111,7 @@ function renderTmOds(){
 }
 
 function updateOdsStats(){
-  const counts={ods1:3426,ods2:1441,ods3:1492,ods4:738,ods5:1081,ods6:1081,ods7:1179,ods8:1254,ods9:807};
+  const counts={ods1:3426,ods2:1441,ods3:1492,ods4:738,ods5:1693,ods6:1081,ods7:1179,ods8:1254,ods9:807};
   for(let v=1;v<=9;v++){
     const th="ods"+v;
     const d=window.THEMODS_DATA?.[th]||[];
