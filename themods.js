@@ -40,6 +40,21 @@ function getTmDict(){
   return TM_DICT;
 }
 
+/* ── Formes fléchies (normalisé → e[] de data.js) ── */
+let _normToE = null;
+function getNormToE(){
+  if(!_normToE){
+    _normToE = {};
+    const d = window.SEQODS_DATA;
+    if(d?.c) d.c.forEach((c,i) => { _normToE[c] = d.e[i]; });
+  }
+  return _normToE;
+}
+function getInflected(normWord){
+  const e = getNormToE()[normWord];
+  return (e && e !== normWord) ? e : null;
+}
+
 /* ── État jeu ── */
 let tmTheme=null, tmSession=null;
 let tmFound=new Set(), tmSolutions=false, tmNoHelp=true;
@@ -333,6 +348,7 @@ function renderGMGame(){
     const isFound=gmFound.has(norm(form))||allFormsFound;
     const revealed=isFound||tmSolutions;
     const letters=form.replace(/[^A-Za-zÀ-ÿ]/g,"");
+    const wrap=document.createElement("div"); wrap.className="gm-row-wrap";
     const row=document.createElement("div"); row.className="gm-row";
     for(let i=0;i<letters.length;i++){
       const t=document.createElement("span");
@@ -341,7 +357,17 @@ function renderGMGame(){
       else { t.className="gt empty"; }
       row.appendChild(t);
     }
-    tilesDiv.appendChild(row);
+    wrap.appendChild(row);
+    if(revealed){
+      const inflected=getInflected(norm(form));
+      if(inflected){
+        const lbl=document.createElement("div");
+        lbl.className="gm-inflected";
+        lbl.textContent=inflected;
+        wrap.appendChild(lbl);
+      }
+    }
+    tilesDiv.appendChild(wrap);
   });
   list.appendChild(tilesDiv);
 
