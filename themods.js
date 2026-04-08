@@ -40,6 +40,36 @@ function getTmDict(){
   return TM_DICT;
 }
 
+/* ── Formes fléchies (normalisé → e[] de data.js) ── */
+let _normToE = null;
+function getNormToE(){
+  if(!_normToE){
+    _normToE = {};
+    const d = window.SEQODS_DATA;
+    if(d?.c) d.c.forEach((c,i) => { _normToE[c] = d.e[i]; });
+  }
+  return _normToE;
+}
+function getInflected(normWord){
+  const e = getNormToE()[normWord];
+  return (e && e !== normWord) ? e : null;
+}
+
+/* ── Définitions (normalisé → f[] de data.js) ── */
+let _normToF = null;
+function getNormToF(){
+  if(!_normToF){
+    _normToF = {};
+    const d = window.SEQODS_DATA;
+    if(d?.c) d.c.forEach((c,i) => { _normToF[c] = d.f?.[i] || ""; });
+  }
+  return _normToF;
+}
+// Vrai si le mot fait >9 lettres ET sa définition contient "(p.p. inv.)"
+function isLongPpInv(n){
+  return n.length > 9 && getNormToF()[n].includes("(p.p. inv.)");
+}
+
 /* ── État jeu ── */
 let tmTheme=null, tmSession=null;
 let tmFound=new Set(), tmSolutions=false, tmNoHelp=true;
@@ -60,11 +90,13 @@ function showTmView(id){
 function renderTmHome(){
   showTmView("tv-home");
   updateTmStats();
+  setDictBtnVisible(true);
 }
 
 function renderTmFinales(){
   showTmView("tv-finales");
   updateFinalesStats();
+  setDictBtnVisible(true);
 }
 
 function updateTmStats(){
@@ -173,6 +205,10 @@ function playTheme(theme){
 function startSession(theme, session){
   tmSession=session; tmFound=new Set(); tmSolutions=false; tmNoHelp=true;
   const edBtn=document.getElementById("gm-ed-btn"); if(edBtn) edBtn.style.display="none";
+  getSt(theme, session.label).seen=true;
+  getSt(theme, session.label).lastSeen=todayStr();
+  persistThemods().catch(()=>{});
+  setDictBtnVisible(false);
   showTmView("tv-game");
   renderTmGame();
   updateTmBtn();
@@ -341,17 +377,27 @@ function renderTmGame(){
 }
 
 function validateTmWord(raw){
-  if(tmTheme==="gm"){ validateGMWord(norm(raw)); return; }
-  if(isOds(tmTheme)){ validateOdsWord(norm(raw)); return; }
-  if(tmSolutions) return;
   const n=norm(raw); if(!n) return;
+  if(tmSolutions){
+    setTmMsg(getTmDict().has(n)?n+" : mot valide ✓":"Mot inconnu.","ok");
+    return;
+  }
+  if(tmTheme==="gm"){ validateGMWord(n); return; }
+  if(isOds(tmTheme)){ validateOdsWord(n); return; }
   const sess=tmSession; if(!sess) return;
   const matched=[];
   sess.words.forEach((w,i)=>{ if(!tmFound.has(i)&&norm(w)===n) matched.push(i); });
   if(!matched.length){
-    setTmMsg(getTmDict().has(n)?"Hors-jeu — mot valide mais pas dans cette liste.":"Mot inconnu — la partie s'arrête.",
-             getTmDict().has(n)?"warn":"err");
-    if(!getTmDict().has(n)) setTimeout(()=>showTmSolutions(),800);
+    const inDict=getTmDict().has(n);
+    if(!inDict){
+      setTmMsg("Mot inconnu — la partie s'arrête.","err");
+      setTimeout(()=>showTmSolutions(),800);
+    } else if(tmTheme==="vi" && !isLongPpInv(n)){
+      setTmMsg("Mot valide — fin de session.","warn");
+      setTimeout(()=>showTmSolutions(),800);
+    } else {
+      setTmMsg("Hors-jeu — mot valide mais pas dans cette liste.","warn");
+    }
     return;
   }
   matched.forEach(i=>{
@@ -394,6 +440,7 @@ function showTmSolutions(){
 
 function finalizeTm(ok){
   tmSolutions=true;
+  setDictBtnVisible(true);
   updateTmBtn();
   const s=getSt(tmTheme, tmSession?.label||"");
   s.seen=true; s.lastSeen=todayStr();
@@ -605,6 +652,7 @@ function startGM(){
     prog.idx=0; prog.done=0;
   }
   gmEntryIdx=prog.idx; gmFound=new Set(); tmSolutions=false; tmNoHelp=true;
+  setDictBtnVisible(false);
   showTmView("tv-game");
   const edBtn=document.getElementById("gm-ed-btn"); if(edBtn) edBtn.style.display="";
   document.getElementById("tm-gtitle").textContent="Graphies multiples";
@@ -651,6 +699,7 @@ function renderGMGame(){
     const isFound=gmFound.has(norm(form))||allFormsFound;
     const revealed=isFound||tmSolutions;
     const letters=form.replace(/[Œœ]/g,"OE").replace(/[Ææ]/g,"AE").replace(/[^A-Za-zÀ-ÿ]/g,"").toUpperCase();
+    const wrap=document.createElement("div"); wrap.className="gm-row-wrap";
     const row=document.createElement("div"); row.className="gm-row";
     for(let i=0;i<letters.length;i++){
       const t=document.createElement("span");
@@ -659,9 +708,37 @@ function renderGMGame(){
       else { t.className="gt empty"; }
       row.appendChild(t);
     }
-    tilesDiv.appendChild(row);
+    wrap.appendChild(row);
+    if(revealed){
+      const inflected=getInflected(norm(form));
+      if(inflected){
+        const lbl=document.createElement("div");
+        lbl.className="gm-inflected";
+        lbl.textContent=inflected;
+        wrap.appendChild(lbl);
+      }
+    }
+    tilesDiv.appendChild(wrap);
   });
   list.appendChild(tilesDiv);
+
+  if(allFormsFound||tmSolutions){
+    const nav=document.createElement("div"); nav.className="gm-nav";
+    const pos=document.createElement("span"); pos.className="gm-pos";
+    pos.textContent=(gmEntryIdx+1)+" / "+all.length;
+    nav.appendChild(pos);
+    const nextBtn=document.createElement("button"); nextBtn.className="btn btn-primary";
+    nextBtn.textContent="Entrée suivante →";
+    nextBtn.addEventListener("click",()=>{
+      gmEntryIdx++; prog.idx=gmEntryIdx;
+      gmFound=new Set(); tmSolutions=false;
+      setDictBtnVisible(false);
+      updateTmBtn(); setTmMsg(""); renderGMGame();
+      persistThemods().catch(()=>{});
+    });
+    nav.appendChild(nextBtn);
+    list.appendChild(nav);
+  }
 }
 
 function validateGMWord(n){
@@ -677,6 +754,7 @@ function validateGMWord(n){
     const prog=getGMProgress();
     prog.done=(prog.done||0)+1; prog.idx=gmEntryIdx+1;
     setTmMsg("✓ Toutes les graphies trouvées !","ok");
+    setDictBtnVisible(true);
     persistThemods().catch(()=>{});
   }
   renderGMGame();

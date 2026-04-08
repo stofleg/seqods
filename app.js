@@ -132,6 +132,7 @@ async function afterLogin(){
     if(el) el.textContent=currentUser.pseudo;
   });
   showView("v-select");
+  setDictBtnVisible(true);
   // interval auto-persist
   setInterval(()=>{ persistMethodsState().catch(()=>{}); persistThemods().catch(()=>{}); }, 60000);
 }
@@ -154,16 +155,16 @@ function initNav(){
   document.getElementById("btn-to-themods")?.addEventListener("click", ()=>{
     chronoStop();
     showView("v-themods");
+    setDictBtnVisible(true);
     initThemods();
   });
   // THEMODS → METHODS
   document.getElementById("btn-tm-back")?.addEventListener("click", ()=>{
     showView("v-methods");
-    // Pas besoin de re-init METHODS, juste reprendre
-    computeStats();
+    ensureMethodsInit(); // init complet si jamais visité, sinon stats sans reset de partie
   });
   // Déconnexion (METHODS + THEMODS)
-  const doLogout=()=>{ chronoStop(); clearSession(); currentUser=null; showView("v-auth"); };
+  const doLogout=()=>{ chronoStop(); clearSession(); currentUser=null; setDictBtnVisible(false); showView("v-auth"); };
   document.getElementById("btn-logout")?.addEventListener("click", doLogout);
   document.getElementById("btn-tm-logout")?.addEventListener("click", doLogout);
   // Settings THEMODS (placeholder — panneau vide pour l'instant)
@@ -218,6 +219,7 @@ async function start(){
   loadSettings();
   initKeyboardDetection();
   wireDefModal();
+  wireDictModal();
   initAuth();
   initSelect();
   initNav();

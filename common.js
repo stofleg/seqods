@@ -252,6 +252,130 @@ function wireKeyboard(kbId, dispId, msgId, onKey){
   return { setMsg: setKbMsg, clear: ()=>{ buf=""; upd(); } };
 }
 
+/* ── Dictionnaire modal ── */
+
+function setDictBtnVisible(v){
+  document.getElementById("btn-dict")?.classList.toggle("hidden", !v);
+}
+
+// Binary search: first index in sorted array C where C[i] >= prefix
+function _dictBisect(C, prefix){
+  let lo=0, hi=C.length;
+  while(lo<hi){ const mid=(lo+hi)>>1; if(C[mid]<prefix) lo=mid+1; else hi=mid; }
+  return lo;
+}
+
+function dictFindSuggestions(prefix, limit=12){
+  const DATA=window.SEQODS_DATA; if(!DATA?.c) return [];
+  const C=DATA.c;
+  const start=_dictBisect(C, prefix);
+  const results=[];
+  for(let i=start; i<C.length && results.length<limit; i++){
+    if(!C[i].startsWith(prefix)) break;
+    results.push(i);
+  }
+  return results;
+}
+
+function dictUpdateLinks(displayWord){
+  const raw=(displayWord||"").split(",")[0].trim().toLowerCase().replace(/\s+.*/,"");
+  const w=document.getElementById("dict-wikt");
+  const img=document.getElementById("dict-img");
+  if(w) w.href = raw ? "https://fr.wiktionary.org/wiki/"+encodeURIComponent(raw) : "#";
+  if(img) img.href = raw ? "https://www.google.com/search?tbm=isch&q="+encodeURIComponent(raw) : "#";
+}
+
+let _dictCurrentIdx = null;
+
+function dictSelectIdx(idx){
+  const DATA=window.SEQODS_DATA; if(!DATA) return;
+  const C=DATA.c, E=DATA.e, F=DATA.f, R=DATA.r;
+  _dictCurrentIdx = idx;
+  // Update input to show the normalized canonical (so further typing refines)
+  const inp=document.getElementById("dict-input");
+  if(inp){ inp.value=C[idx]; inp.selectionStart=inp.selectionEnd=C[idx].length; }
+  // Clear suggestions
+  document.getElementById("dict-sugg").innerHTML="";
+  // Show result
+  const display=E[idx]||C[idx];
+  document.getElementById("dict-word").textContent=display;
+  document.getElementById("dict-def").textContent=(F[idx]||"").replace(/^(?:ou\s+)?\[[^\]]*\]\s*/i,"").trim()||"(définition absente)";
+  const lst=R?.[C[idx]]||[];
+  const rallEl=document.getElementById("dict-rall");
+  rallEl.innerHTML=lst.length?`<strong>Rallonges</strong><span>${lst.join(" • ")}</span>`:"";
+  document.getElementById("dict-result").style.display="";
+  dictUpdateLinks(display);
+}
+
+function _dictRenderSugg(prefix){
+  const sugg=document.getElementById("dict-sugg"); if(!sugg) return;
+  sugg.innerHTML="";
+  if(!prefix){ return; }
+  const DATA=window.SEQODS_DATA; if(!DATA?.c) return;
+  const idxs=dictFindSuggestions(prefix);
+  if(!idxs.length){
+    const li=document.createElement("li"); li.className="dict-no-result";
+    li.textContent="Mot inconnu."; sugg.appendChild(li); return;
+  }
+  idxs.forEach(i=>{
+    const li=document.createElement("li");
+    li.textContent=DATA.e[i]||DATA.c[i];
+    li.addEventListener("click",()=>dictSelectIdx(i));
+    sugg.appendChild(li);
+  });
+}
+
+function openDictModal(){
+  const m=document.getElementById("dict-modal"); if(!m) return;
+  m.classList.add("open");
+  _dictCurrentIdx=null;
+  const inp=document.getElementById("dict-input");
+  if(inp){ inp.value=""; }
+  document.getElementById("dict-sugg").innerHTML="";
+  document.getElementById("dict-result").style.display="none";
+  dictUpdateLinks("");
+  // Focus input after transition (slight delay for iOS)
+  setTimeout(()=>inp?.focus(), 80);
+}
+
+function closeDictModal(){
+  document.getElementById("dict-modal")?.classList.remove("open");
+}
+
+function wireDictModal(){
+  document.getElementById("btn-dict")?.addEventListener("click", openDictModal);
+  document.getElementById("dict-close")?.addEventListener("click", closeDictModal);
+  document.getElementById("dict-bd")?.addEventListener("click", closeDictModal);
+
+  const inp=document.getElementById("dict-input");
+  if(inp){
+    inp.addEventListener("input", e=>{
+      const v=norm(e.target.value);
+      _dictCurrentIdx=null;
+      document.getElementById("dict-result").style.display="none";
+      dictUpdateLinks(e.target.value);
+      _dictRenderSugg(v);
+    });
+    inp.addEventListener("keydown", e=>{
+      if(e.key==="Escape"){ closeDictModal(); return; }
+      if(e.key==="Enter"){
+        const v=norm(inp.value); if(!v) return;
+        const DATA=window.SEQODS_DATA; if(!DATA?.c) return;
+        // Exact match first
+        const exact=DATA.c.indexOf(v);
+        if(exact>=0){ dictSelectIdx(exact); return; }
+        // First suggestion
+        const first=document.querySelector("#dict-sugg li:not(.dict-no-result)");
+        if(first) first.click();
+      }
+    });
+  }
+  // Escape anywhere
+  document.addEventListener("keydown", e=>{
+    if(e.key==="Escape") closeDictModal();
+  });
+}
+
 /* ── Auth UI ── */
 function wireAuthUI(onSuccess){
   // Onglets
