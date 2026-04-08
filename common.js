@@ -258,23 +258,22 @@ function setDictBtnVisible(v){
   document.getElementById("btn-dict")?.classList.toggle("hidden", !v);
 }
 
-// Binary search: first index in sorted array C where C[i] >= prefix
-function _dictBisect(C, prefix){
-  let lo=0, hi=C.length;
-  while(lo<hi){ const mid=(lo+hi)>>1; if(C[mid]<prefix) lo=mid+1; else hi=mid; }
+// Binary search: premier index i dans le tableau trié A tel que A[i] >= prefix
+function _dictBisect(A, prefix){
+  let lo=0, hi=A.length;
+  while(lo<hi){ const mid=(lo+hi)>>1; if(A[mid]<prefix) lo=mid+1; else hi=mid; }
   return lo;
 }
 
-function dictFindSuggestions(prefix, limit=12){
-  const DATA=window.SEQODS_DATA; if(!DATA?.c) return [];
-  const C=DATA.c;
-  const start=_dictBisect(C, prefix);
-  const results=[];
-  for(let i=start; i<C.length && results.length<limit; i++){
-    if(!C[i].startsWith(prefix)) break;
-    results.push(i);
+// Map lazy : mot canonique → index dans c[] (pour retrouver def/display)
+let _cMap=null;
+function _getCMap(){
+  if(!_cMap){
+    _cMap=new Map();
+    const c=window.SEQODS_DATA?.c;
+    if(c) c.forEach((w,i)=>_cMap.set(w,i));
   }
-  return results;
+  return _cMap;
 }
 
 function dictUpdateLinks(displayWord){
@@ -285,56 +284,69 @@ function dictUpdateLinks(displayWord){
   if(img) img.href = raw ? "https://www.google.com/search?tbm=isch&q="+encodeURIComponent(raw) : "#";
 }
 
-let _dictCurrentIdx = null;
-
-function dictSelectIdx(idx){
+// Afficher le résultat pour un mot canonique normalisé (présent dans d[])
+function dictSelectWord(w){
   const DATA=window.SEQODS_DATA; if(!DATA) return;
-  const C=DATA.c, E=DATA.e, F=DATA.f, R=DATA.r;
-  _dictCurrentIdx = idx;
-  // Update input to show the normalized canonical (so further typing refines)
   const inp=document.getElementById("dict-input");
-  if(inp){ inp.value=C[idx]; inp.selectionStart=inp.selectionEnd=C[idx].length; }
-  // Clear suggestions
+  if(inp){ inp.value=w; }
   document.getElementById("dict-sugg").innerHTML="";
-  // Show result
-  const display=E[idx]||C[idx];
-  document.getElementById("dict-word").textContent=display;
-  document.getElementById("dict-def").textContent=(F[idx]||"").replace(/^(?:ou\s+)?\[[^\]]*\]\s*/i,"").trim()||"(définition absente)";
-  const lst=R?.[C[idx]]||[];
-  const rallEl=document.getElementById("dict-rall");
-  rallEl.innerHTML=lst.length?`<strong>Rallonges</strong><span>${lst.join(" • ")}</span>`:"";
+
+  const cIdx=_getCMap().get(w);
+  if(cIdx!==undefined){
+    // Entrée complète : forme fléchie, définition, rallonges
+    const display=DATA.e[cIdx]||w;
+    document.getElementById("dict-word").textContent=display;
+    document.getElementById("dict-def").textContent=
+      (DATA.f[cIdx]||"").replace(/^(?:ou\s+)?\[[^\]]*\]\s*/i,"").trim()||"(définition absente)";
+    const lst=DATA.r?.[w]||[];
+    document.getElementById("dict-rall").innerHTML=
+      lst.length?`<strong>Rallonges</strong><span>${lst.join(" • ")}</span>`:"";
+    dictUpdateLinks(display);
+  } else {
+    // Forme variable (fléchie) sans entrée propre
+    document.getElementById("dict-word").textContent=w;
+    document.getElementById("dict-def").textContent="Forme variable · Mot valide ODS9";
+    document.getElementById("dict-rall").innerHTML="";
+    dictUpdateLinks(w);
+  }
   document.getElementById("dict-result").style.display="";
-  dictUpdateLinks(display);
 }
 
 function _dictRenderSugg(prefix){
   const sugg=document.getElementById("dict-sugg"); if(!sugg) return;
   sugg.innerHTML="";
-  if(!prefix){ return; }
-  const DATA=window.SEQODS_DATA; if(!DATA?.c) return;
-  const idxs=dictFindSuggestions(prefix);
-  if(!idxs.length){
-    const li=document.createElement("li"); li.className="dict-no-result";
-    li.textContent="Mot inconnu."; sugg.appendChild(li); return;
-  }
-  idxs.forEach(i=>{
+  if(!prefix) return;
+  const DATA=window.SEQODS_DATA; if(!DATA?.d) return;
+  const D=DATA.d;
+  const start=_dictBisect(D, prefix);
+  const frag=document.createDocumentFragment();
+  let count=0;
+  for(let i=start; i<D.length && count<14; i++){
+    if(!D[i].startsWith(prefix)) break;
+    const w=D[i];
     const li=document.createElement("li");
-    li.textContent=DATA.e[i]||DATA.c[i];
-    li.addEventListener("click",()=>dictSelectIdx(i));
-    sugg.appendChild(li);
-  });
+    // Afficher la forme accentuée si disponible (mot dans c[]), sinon forme brute
+    const cIdx=_getCMap().get(w);
+    li.textContent=cIdx!==undefined ? (DATA.e[cIdx]||w) : w;
+    li.addEventListener("click",()=>dictSelectWord(w));
+    frag.appendChild(li);
+    count++;
+  }
+  if(!count){
+    const li=document.createElement("li"); li.className="dict-no-result";
+    li.textContent="Mot inconnu."; frag.appendChild(li);
+  }
+  sugg.appendChild(frag);
 }
 
 function openDictModal(){
   const m=document.getElementById("dict-modal"); if(!m) return;
   m.classList.add("open");
-  _dictCurrentIdx=null;
   const inp=document.getElementById("dict-input");
   if(inp){ inp.value=""; }
   document.getElementById("dict-sugg").innerHTML="";
   document.getElementById("dict-result").style.display="none";
   dictUpdateLinks("");
-  // Focus input after transition (slight delay for iOS)
   setTimeout(()=>inp?.focus(), 80);
 }
 
@@ -350,27 +362,24 @@ function wireDictModal(){
   const inp=document.getElementById("dict-input");
   if(inp){
     inp.addEventListener("input", e=>{
-      const v=norm(e.target.value);
-      _dictCurrentIdx=null;
       document.getElementById("dict-result").style.display="none";
       dictUpdateLinks(e.target.value);
-      _dictRenderSugg(v);
+      _dictRenderSugg(norm(e.target.value));
     });
     inp.addEventListener("keydown", e=>{
       if(e.key==="Escape"){ closeDictModal(); return; }
       if(e.key==="Enter"){
         const v=norm(inp.value); if(!v) return;
-        const DATA=window.SEQODS_DATA; if(!DATA?.c) return;
-        // Exact match first
-        const exact=DATA.c.indexOf(v);
-        if(exact>=0){ dictSelectIdx(exact); return; }
-        // First suggestion
+        const D=window.SEQODS_DATA?.d; if(!D) return;
+        // Correspondance exacte dans d[]
+        const start=_dictBisect(D,v);
+        if(start<D.length && D[start]===v){ dictSelectWord(v); return; }
+        // Première suggestion
         const first=document.querySelector("#dict-sugg li:not(.dict-no-result)");
         if(first) first.click();
       }
     });
   }
-  // Escape anywhere
   document.addEventListener("keydown", e=>{
     if(e.key==="Escape") closeDictModal();
   });
