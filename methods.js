@@ -345,6 +345,12 @@ function mFinalizeList(ok){
 }
 
 /* ── Init ── */
+// Appelé depuis btn-tm-back : init si jamais visité, sinon juste stats (sans reset de partie)
+function ensureMethodsInit(){
+  if(!mInited) initMethods();
+  else { computeStats(); setDictBtnVisible(mPhase!=="PLAYING"); }
+}
+
 function initMethods(){
   if(mInited){ computeStats(); methodsReplay(); return; }
   mInited=true;

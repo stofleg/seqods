@@ -144,7 +144,7 @@ function initNav(){
   // THEMODS → METHODS
   document.getElementById("btn-tm-back")?.addEventListener("click", ()=>{
     showView("v-methods");
-    initMethods(); // gère mInited en interne (câble les listeners si première visite)
+    ensureMethodsInit(); // init complet si jamais visité, sinon stats sans reset de partie
   });
   // Déconnexion
   document.getElementById("btn-logout")?.addEventListener("click", ()=>{
