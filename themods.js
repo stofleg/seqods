@@ -55,6 +55,21 @@ function getInflected(normWord){
   return (e && e !== normWord) ? e : null;
 }
 
+/* ── Définitions (normalisé → f[] de data.js) ── */
+let _normToF = null;
+function getNormToF(){
+  if(!_normToF){
+    _normToF = {};
+    const d = window.SEQODS_DATA;
+    if(d?.c) d.c.forEach((c,i) => { _normToF[c] = d.f?.[i] || ""; });
+  }
+  return _normToF;
+}
+// Vrai si le mot fait >9 lettres ET sa définition contient "(p.p. inv.)"
+function isLongPpInv(n){
+  return n.length > 9 && getNormToF()[n].includes("(p.p. inv.)");
+}
+
 /* ── État jeu ── */
 let tmTheme=null, tmSession=null;
 let tmFound=new Set(), tmSolutions=false, tmNoHelp=true;
@@ -182,16 +197,26 @@ function renderTmGame(){
 }
 
 function validateTmWord(raw){
-  if(tmTheme==="gm"){ validateGMWord(norm(raw)); return; }
-  if(tmSolutions) return;
   const n=norm(raw); if(!n) return;
+  if(tmSolutions){
+    setTmMsg(getTmDict().has(n)?n+" : mot valide ✓":"Mot inconnu.","ok");
+    return;
+  }
+  if(tmTheme==="gm"){ validateGMWord(n); return; }
   const sess=tmSession; if(!sess) return;
   const matched=[];
   sess.words.forEach((w,i)=>{ if(!tmFound.has(i)&&norm(w)===n) matched.push(i); });
   if(!matched.length){
-    setTmMsg(getTmDict().has(n)?"Hors-jeu — mot valide mais pas dans cette liste.":"Mot inconnu — la partie s'arrête.",
-             getTmDict().has(n)?"warn":"err");
-    if(!getTmDict().has(n)) setTimeout(()=>showTmSolutions(),800);
+    const inDict=getTmDict().has(n);
+    if(!inDict){
+      setTmMsg("Mot inconnu — la partie s'arrête.","err");
+      setTimeout(()=>showTmSolutions(),800);
+    } else if(tmTheme==="vi" && !isLongPpInv(n)){
+      setTmMsg("Mot valide — fin de session.","warn");
+      setTimeout(()=>showTmSolutions(),800);
+    } else {
+      setTmMsg("Hors-jeu — mot valide mais pas dans cette liste.","warn");
+    }
     return;
   }
   matched.forEach(i=>{
