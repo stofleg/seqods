@@ -707,11 +707,16 @@ body.kb-open #btn-dict{display:none;}
   </div>
 </div>
 
-<script src="data.js?v=3.1"></script>
-<script src="themods_data.js?v=3.1"></script>
-<script src="common.js?v=3.1"></script>
-<script src="methods.js?v=3.1"></script>
-<script src="themods.js?v=3.1"></script>
-<script src="app.js?v=3.1"></script>
+<script src="data.js"></script>
+<script src="themods_data.js"></script>
+<script src="common.js"></script>
+<script src="methods.js"></script>
+<script src="themods.js"></script>
+<script src="app.js"></script>
+<script>
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("./sw.js").catch(()=>{});
+}
+</script>
 </body>
 </html>
