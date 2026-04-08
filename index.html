@@ -726,6 +726,10 @@ body.kb-open #btn-dict{display:none;}
 <script>
 if("serviceWorker" in navigator){
   navigator.serviceWorker.register("./sw.js").catch(()=>{});
+  // Quand un nouveau SW prend le contrôle, recharger pour servir les fichiers frais
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    window.location.reload();
+  });
 }
 </script>
 </body>
