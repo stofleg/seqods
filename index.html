@@ -391,6 +391,36 @@ body.kb-open .slot{min-height:28px;font-size:12px;}
 .gm-row{ flex-wrap:wrap; justify-content:center; gap:4px; }
 .gt{ width:clamp(28px,8vw,36px); height:clamp(32px,9vw,40px); font-size:clamp(14px,4vw,18px); border-radius:6px; }
 
+/* ── Bouton dictionnaire flottant ── */
+#btn-dict{
+  position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);right:18px;
+  z-index:300;width:46px;height:46px;border-radius:50%;
+  background:var(--accent);color:#fff;font-size:20px;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 18px rgba(0,0,0,.45);border:none;cursor:pointer;
+  transition:opacity .18s,transform .18s;}
+#btn-dict.hidden{opacity:0;pointer-events:none;transform:scale(.75);}
+body.kb-open #btn-dict{display:none;}
+
+/* ── Modal dictionnaire ── */
+.dict-inp{width:100%;padding:9px 14px;border-radius:12px;
+  border:1px solid var(--stroke);background:rgba(255,255,255,.07);
+  color:var(--txt);font-size:15px;outline:none;font-family:inherit;
+  letter-spacing:.05em;text-transform:uppercase;}
+@media(prefers-color-scheme:light){.dict-inp{background:rgba(255,255,255,.8);}}
+.dict-inp:focus{box-shadow:0 0 0 3px var(--focus);}
+.dict-sugg{list-style:none;margin-top:6px;max-height:190px;overflow-y:auto;
+  display:flex;flex-direction:column;gap:1px;}
+.dict-sugg li{padding:7px 12px;border-radius:8px;cursor:pointer;
+  font-size:14px;font-weight:700;letter-spacing:.05em;color:var(--txt);
+  transition:background .1s;}
+.dict-sugg li:hover,.dict-sugg li:active{background:rgba(255,255,255,.1);}
+@media(prefers-color-scheme:light){
+  .dict-sugg li:hover,.dict-sugg li:active{background:rgba(0,0,0,.07);}
+}
+.dict-result-word{font-size:19px;font-weight:950;letter-spacing:.06em;margin:10px 0 3px;}
+.dict-no-result{font-size:13px;color:var(--danger);padding:4px 0;}
+
 /* ══ PWA / Safe Area (notch iPhone) ══ */
 /* Les vues couvrent tout l'écran (position:fixed;inset:0)
    On compense le notch avec du padding sur chaque vue */
@@ -647,6 +677,33 @@ body.kb-open .slot{min-height:28px;font-size:12px;}
       <input type="range" id="set-dur" min="1" max="30" value="10" style="width:110px;"/>
     </div>
     <button id="btn-close-settings" class="btn" style="width:100%;margin-top:6px;">Fermer</button>
+  </div>
+</div>
+
+<!-- ══ BOUTON DICT FLOTTANT ══ -->
+<button id="btn-dict" class="hidden" aria-label="Dictionnaire">📚</button>
+
+<!-- ══ MODAL DICTIONNAIRE ══ -->
+<div id="dict-modal" class="modal">
+  <div class="modal-bd" id="dict-bd"></div>
+  <div class="modal-panel">
+    <div class="modal-top">
+      <h2>Dictionnaire ODS9</h2>
+      <button id="dict-close" class="btn">Fermer</button>
+    </div>
+    <input id="dict-input" class="dict-inp" type="text"
+      autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"
+      placeholder="Saisir un mot…"/>
+    <ul id="dict-sugg" class="dict-sugg"></ul>
+    <div class="modal-links">
+      <a id="dict-wikt" href="#" target="_blank" rel="noopener" class="btn btn-ok" style="font-size:12px;text-decoration:none;">📖 Wiktionnaire</a>
+      <a id="dict-img" href="#" target="_blank" rel="noopener" class="btn btn-primary" style="font-size:12px;text-decoration:none;">🔍 Image</a>
+    </div>
+    <div id="dict-result" style="display:none;">
+      <p class="dict-result-word" id="dict-word"></p>
+      <p id="dict-def" class="modal-def"></p>
+      <div id="dict-rall" class="modal-sec"></div>
+    </div>
   </div>
 </div>
 

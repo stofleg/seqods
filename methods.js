@@ -264,6 +264,7 @@ function prepareGame(idx){
   seq={...sequences[idx], seqIndex:idx};
   mFound=new Set(); hintMode=Array(10).fill("none"); hintUsed=Array(10).fill(false);
   mNoHelp=true; mPhase="WAITING";
+  setDictBtnVisible(true);
   buildTargets(seq);
   renderBounds();
   renderSlots();
@@ -277,6 +278,7 @@ function prepareGame(idx){
 // Lancer la partie (au clic Jouer depuis WAITING)
 function launchGame(){
   mPhase="PLAYING";
+  setDictBtnVisible(false);
   updateBtn();
   setMethodsMsg("");
   renderBounds(); // Révéler les bornes au lancement
@@ -325,6 +327,7 @@ function mShowSolutions(){
 function mFinalizeList(ok){
   chronoStop();
   mPhase="DONE";
+  setDictBtnVisible(true);
   updateBtn();
   const s=ensureListState(seq.seqIndex);
   s.seen=true; s.lastSeen=todayStr();

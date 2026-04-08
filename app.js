@@ -115,6 +115,7 @@ async function afterLogin(){
   const chip=document.getElementById("user-chip");
   if(chip) chip.textContent=currentUser.pseudo;
   showView("v-select");
+  setDictBtnVisible(true);
   // interval auto-persist
   setInterval(()=>{ persistMethodsState().catch(()=>{}); persistThemods().catch(()=>{}); }, 60000);
 }
@@ -137,6 +138,7 @@ function initNav(){
   document.getElementById("btn-to-themods")?.addEventListener("click", ()=>{
     chronoStop();
     showView("v-themods");
+    setDictBtnVisible(true);
     initThemods();
   });
   // THEMODS → METHODS
@@ -150,6 +152,7 @@ function initNav(){
     chronoStop();
     clearSession();
     currentUser=null;
+    setDictBtnVisible(false);
     showView("v-auth");
   });
   // F1
@@ -202,6 +205,7 @@ async function start(){
   loadSettings();
   initKeyboardDetection();
   wireDefModal();
+  wireDictModal();
   initAuth();
   initSelect();
   initNav();

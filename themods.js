@@ -89,11 +89,13 @@ function showTmView(id){
 function renderTmHome(){
   showTmView("tv-home");
   updateTmStats();
+  setDictBtnVisible(true);
 }
 
 function renderTmFinales(){
   showTmView("tv-finales");
   updateFinalesStats();
+  setDictBtnVisible(true);
 }
 
 function updateTmStats(){
@@ -155,6 +157,7 @@ function startSession(theme, session){
   getSt(theme, session.label).seen=true;
   getSt(theme, session.label).lastSeen=todayStr();
   persistThemods().catch(()=>{});
+  setDictBtnVisible(false);
   showTmView("tv-game");
   renderTmGame();
   updateTmBtn();
@@ -258,6 +261,7 @@ function showTmSolutions(){
 
 function finalizeTm(ok){
   tmSolutions=true;
+  setDictBtnVisible(true);
   updateTmBtn();
   const s=getSt(tmTheme, tmSession?.label||"");
   if(ok){
@@ -342,6 +346,7 @@ function startGM(){
     prog.idx=0; prog.done=0;
   }
   gmEntryIdx=prog.idx; gmFound=new Set(); tmSolutions=false; tmNoHelp=true;
+  setDictBtnVisible(false);
   showTmView("tv-game");
   document.getElementById("tm-gtitle").textContent="";
   document.getElementById("tm-gtheme").textContent="Graphies multiples";
@@ -406,6 +411,7 @@ function renderGMGame(){
     nextBtn.addEventListener("click",()=>{
       gmEntryIdx++; prog.idx=gmEntryIdx;
       gmFound=new Set(); tmSolutions=false;
+      setDictBtnVisible(false);
       updateTmBtn(); setTmMsg(""); renderGMGame();
       persistThemods().catch(()=>{});
     });
@@ -427,6 +433,7 @@ function validateGMWord(n){
     const prog=getGMProgress();
     prog.done=(prog.done||0)+1; prog.idx=gmEntryIdx+1;
     setTmMsg("✓ Toutes les graphies trouvées !","ok");
+    setDictBtnVisible(true);
     persistThemods().catch(()=>{});
   }
   renderGMGame();
