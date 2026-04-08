@@ -144,8 +144,7 @@ function initNav(){
   // THEMODS → METHODS
   document.getElementById("btn-tm-back")?.addEventListener("click", ()=>{
     showView("v-methods");
-    // Pas besoin de re-init METHODS, juste reprendre
-    computeStats();
+    initMethods(); // gère mInited en interne (câble les listeners si première visite)
   });
   // Déconnexion
   document.getElementById("btn-logout")?.addEventListener("click", ()=>{
