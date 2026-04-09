@@ -33,6 +33,9 @@ function getSt(theme, label){
   return tmState.themes[theme][label];
 }
 
+/* ── Droits éditeur ── */
+function isEditor(){ return currentUser?.pseudo?.toLowerCase()==="stof2"; }
+
 /* ── Dict ODS ── */
 let TM_DICT = null;
 function getTmDict(){
@@ -268,7 +271,7 @@ function startOds(theme){
   }
   odsEntryIdx=prog.idx; odsFnd=new Set(); tmSolutions=false; tmNoHelp=true;
   showTmView("tv-game");
-  const edBtn=document.getElementById("gm-ed-btn"); if(edBtn) edBtn.style.display="";
+  const edBtn=document.getElementById("gm-ed-btn"); if(edBtn) edBtn.style.display=isEditor()?"":"none";
   document.getElementById("tm-gtitle").textContent=THEME_NAMES[theme]||theme;
   const lbl=document.getElementById("tm-session-label"); if(lbl) lbl.textContent="";
   updateTmBtn(); setTmMsg(""); renderOdsGame();
@@ -680,7 +683,7 @@ function startGM(){
   gmEntryIdx=prog.idx; gmFound=new Set(); tmSolutions=false; tmNoHelp=true;
   setDictBtnVisible(false);
   showTmView("tv-game");
-  const edBtn=document.getElementById("gm-ed-btn"); if(edBtn) edBtn.style.display="";
+  const edBtn=document.getElementById("gm-ed-btn"); if(edBtn) edBtn.style.display=isEditor()?"":"none";
   document.getElementById("tm-gtitle").textContent="Graphies multiples";
   const lbl=document.getElementById("tm-session-label"); if(lbl) lbl.textContent="";
   updateTmBtn(); setTmMsg(""); renderGMGame();
