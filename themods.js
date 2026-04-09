@@ -756,16 +756,6 @@ function renderGMGame(){
     const pos=document.createElement("span"); pos.className="gm-pos";
     pos.textContent=(gmEntryIdx+1)+" / "+all.length;
     nav.appendChild(pos);
-    const nextBtn=document.createElement("button"); nextBtn.className="btn btn-primary";
-    nextBtn.textContent="Entrée suivante →";
-    nextBtn.addEventListener("click",()=>{
-      gmEntryIdx++; prog.idx=gmEntryIdx;
-      gmFound=new Set(); tmSolutions=false;
-      setDictBtnVisible(false);
-      updateTmBtn(); setTmMsg(""); renderGMGame();
-      persistThemods().catch(()=>{});
-    });
-    nav.appendChild(nextBtn);
     list.appendChild(nav);
   }
 }
