@@ -566,6 +566,8 @@ function openGMEditor(){
   if(imgEl) imgEl.src=custom.img||"";
   if(imgWrap) imgWrap.style.display=custom.img?"":"none";
   if(delBtn) delBtn.style.display=custom.img?"":"none";
+  const wiktEl=document.getElementById("gm-ed-wikt");
+  if(wiktEl) wiktEl.href="https://fr.wiktionary.org/wiki/"+encodeURIComponent(entry.forms[0].toLowerCase());
   document.getElementById("gm-editor").style.display="";
   setTimeout(()=>defEl?.focus(),80);
 }
@@ -821,7 +823,6 @@ function initThemods(){
     document.getElementById("gm-ed-close")?.addEventListener("click",()=>closeGMEditor());
     document.getElementById("gm-ed-cancel")?.addEventListener("click",()=>closeGMEditor());
     document.getElementById("gm-ed-save")?.addEventListener("click",()=>saveGMEditor());
-    document.getElementById("gm-ed-paste")?.addEventListener("click",()=>pasteGMImage());
     document.getElementById("gm-ed-del-img")?.addEventListener("click",()=>{
       gmEdPendingImg=null;
       const imgWrap=document.getElementById("gm-ed-img-wrap");
