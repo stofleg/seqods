@@ -112,7 +112,7 @@ function updateVerbesStats(){
   const vtData=window.THEMODS_DATA?.vt||[];
   let vtVal=0; vtData.forEach(({label})=>{ if(getSt("vt",label).validated) vtVal++; });
   const vtEl=document.getElementById("vt-desc");
-  if(vtEl) vtEl.textContent="4 659 verbes · 1 469 sessions"+(vtVal>0?" · "+vtVal+"/"+vtData.length+" val.":"");
+  if(vtEl) vtEl.textContent="4 968 verbes · 1 580 sessions"+(vtVal>0?" · "+vtVal+"/"+vtData.length+" val.":"");
 
   const vdData=window.THEMODS_DATA?.vd||[];
   let vdVal=0; vdData.forEach(({label})=>{ if(getSt("vd",label).validated) vdVal++; });
