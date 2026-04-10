@@ -121,6 +121,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;}
 .modal-sec{margin-top:12px;font-size:13px;line-height:1.5;}
 .modal-sec strong{color:var(--txt);display:block;margin-bottom:4px;}
 .modal-sec span{color:var(--muted);}
+a.def-link{color:var(--acc);text-decoration:none;}
+a.def-link:hover{text-decoration:underline;}
 
 /* Settings overlay */
 .overlay{display:none;position:fixed;inset:0;z-index:400;align-items:flex-end;justify-content:center;}
@@ -604,8 +606,8 @@ body.kb-open .slot{min-height:28px;font-size:12px;}
             <div><div class="tc-lbl">Graphies multiples</div><div class="tc-desc" id="gm-desc">1 808 groupes</div></div>
             <span class="tc-arr">›</span>
           </div>
-          <div class="tc tc-v" data-theme="vi">
-            <div><div class="tc-lbl">Intransitifs</div><div class="tc-desc" id="vi-desc">575 verbes · 193 sessions</div></div>
+          <div class="tc tc-v" id="btn-verbes">
+            <div><div class="tc-lbl">Verbes</div><div class="tc-desc" id="verbes-desc">3 thèmes · 5 230 verbes</div></div>
             <span class="tc-arr">›</span>
           </div>
           <div class="tc tc-o" id="btn-ods">
@@ -618,6 +620,22 @@ body.kb-open .slot{min-height:28px;font-size:12px;}
           <span id="tm-srs-count"></span> à réviser —
           <button id="tm-srs-ok" class="btn btn-primary" style="font-size:12px;padding:5px 12px;">Jouer</button>
           <button id="tm-srs-skip" class="btn" style="font-size:12px;padding:5px 10px;">Passer</button>
+        </div>
+      </div>
+    </div>
+    <!-- sous-vue : verbes -->
+    <div id="tv-verbes" class="tmv">
+      <div class="tm-hdr">
+        <div class="tm-nav">
+          <button id="btn-back-verbes" class="btn" style="font-size:14px;padding:5px 9px;">←</button>
+          <span class="tm-nav-title">Verbes</span>
+        </div>
+      </div>
+      <div class="tm-body">
+        <div class="tm-grid">
+          <div class="tc tc-v" data-theme="vi"><div><div class="tc-lbl">Intransitifs</div><div class="tc-desc" id="vi-desc2">575 verbes · 193 sessions</div></div><span class="tc-arr">›</span></div>
+          <div class="tc tc-v" data-theme="vt"><div><div class="tc-lbl">Transitifs</div><div class="tc-desc" id="vt-desc">4 659 verbes · 1 469 sessions</div></div><span class="tc-arr">›</span></div>
+          <div class="tc tc-v" data-theme="vd"><div><div class="tc-lbl">Défectifs</div><div class="tc-desc" id="vd-desc">66 verbes · 42 sessions</div></div><span class="tc-arr">›</span></div>
         </div>
       </div>
     </div>
@@ -691,6 +709,8 @@ body.kb-open .slot{min-height:28px;font-size:12px;}
       <div class="tm-ghdr">
         <div id="tm-gtitle" class="tm-gtitle" style="flex:1;"></div>
         <button id="gm-ed-btn" class="btn" style="display:none;font-size:14px;padding:5px 8px;" title="Modifier l'entrée">✏️</button>
+        <button id="tm-btn-browse" class="btn" style="display:none;font-size:12px;padding:6px 12px;">Feuilleter</button>
+        <button id="tm-btn-next" class="btn btn-primary" style="display:none;font-size:12px;padding:6px 12px;">Suivant →</button>
         <button id="tm-btn-sol" class="btn btn-danger" style="font-size:12px;padding:6px 12px;">Solutions</button>
         <button id="btn-back-game" class="btn" style="font-size:12px;padding:6px 12px;white-space:nowrap;">← Thèmes</button>
       </div>
@@ -811,7 +831,7 @@ body.kb-open .slot{min-height:28px;font-size:12px;}
   position:fixed;bottom:4px;left:8px;z-index:9999;
   font-size:9px;font-weight:700;color:rgba(255,255,255,.28);
   font-family:ui-monospace,monospace;letter-spacing:.04em;
-  pointer-events:none;user-select:none;">v3.6</div>
+  pointer-events:none;user-select:none;">v3.7</div>
 
 <script src="data.js"></script>
 <script src="themods_data.js"></script>

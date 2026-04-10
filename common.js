@@ -198,16 +198,38 @@ function openDef(canon, displayWord){
   if(A && anaEl){
     const tir = canon.split("").sort((a,b)=>a.localeCompare(b,"fr")).join("");
     const lst = (A[tir]||[]).filter(x=>norm(x)!==canon).slice(0,60);
-    if(lst.length){ anaEl.innerHTML=`<strong>Anagrammes</strong><span>${lst.join(" • ")}</span>`; }
-    else anaEl.innerHTML="";
+    if(lst.length){
+      anaEl.innerHTML="";
+      const lbl=document.createElement("strong"); lbl.textContent="Anagrammes"; anaEl.appendChild(lbl);
+      const sp=document.createElement("span");
+      lst.forEach((w,i)=>{
+        if(i) sp.appendChild(document.createTextNode(" • "));
+        const a=document.createElement("a"); a.href="#"; a.className="def-link";
+        a.textContent=w;
+        a.addEventListener("click",e=>{ e.preventDefault(); openDef(norm(w),w); });
+        sp.appendChild(a);
+      });
+      anaEl.appendChild(sp);
+    } else anaEl.innerHTML="";
   }
 
   // Rallonges
   const rallEl = $("#def-rall");
   if(R && rallEl){
     const lst = R[canon]||[];
-    if(lst.length){ rallEl.innerHTML=`<strong>Rallonges</strong><span>${lst.join(" • ")}</span>`; }
-    else rallEl.innerHTML="";
+    if(lst.length){
+      rallEl.innerHTML="";
+      const lbl=document.createElement("strong"); lbl.textContent="Rallonges"; rallEl.appendChild(lbl);
+      const sp=document.createElement("span");
+      lst.forEach((w,i)=>{
+        if(i) sp.appendChild(document.createTextNode(" • "));
+        const a=document.createElement("a"); a.href="#"; a.className="def-link";
+        a.textContent=w;
+        a.addEventListener("click",e=>{ e.preventDefault(); openDef(norm(w),w); });
+        sp.appendChild(a);
+      });
+      rallEl.appendChild(sp);
+    } else rallEl.innerHTML="";
   }
 
   $("#def-modal").classList.add("open");
@@ -300,8 +322,22 @@ function dictSelectWord(w){
     document.getElementById("dict-def").textContent=
       (DATA.f[cIdx]||"").replace(/^(?:ou\s+)?\[[^\]]*\]\s*/i,"").trim()||"(définition absente)";
     const lst=DATA.r?.[w]||[];
-    document.getElementById("dict-rall").innerHTML=
-      lst.length?`<strong>Rallonges</strong><span>${lst.join(" • ")}</span>`:"";
+    const rallEl=document.getElementById("dict-rall");
+    if(rallEl){
+      rallEl.innerHTML="";
+      if(lst.length){
+        const lbl=document.createElement("strong"); lbl.textContent="Rallonges"; rallEl.appendChild(lbl);
+        const sp=document.createElement("span");
+        lst.forEach((rw,i)=>{
+          if(i) sp.appendChild(document.createTextNode(" • "));
+          const a=document.createElement("a"); a.href="#"; a.className="def-link";
+          a.textContent=rw;
+          a.addEventListener("click",e=>{ e.preventDefault(); dictSelectWord(norm(rw)); });
+          sp.appendChild(a);
+        });
+        rallEl.appendChild(sp);
+      }
+    }
     dictUpdateLinks(display);
   } else {
     // Forme variable (fléchie) sans entrée propre
@@ -317,19 +353,16 @@ function _dictRenderSugg(prefix){
   const sugg=document.getElementById("dict-sugg"); if(!sugg) return;
   sugg.innerHTML="";
   if(!prefix) return;
-  const DATA=window.SEQODS_DATA; if(!DATA?.d) return;
-  const D=DATA.d;
-  const start=_dictBisect(D, prefix);
+  const DATA=window.SEQODS_DATA; if(!DATA?.c) return;
+  const C=DATA.c, E=DATA.e||[];
+  const start=_dictBisect(C, prefix);
   const frag=document.createDocumentFragment();
   let count=0;
-  for(let i=start; i<D.length && count<14; i++){
-    if(!D[i].startsWith(prefix)) break;
-    const w=D[i];
+  for(let i=start; i<C.length && count<14; i++){
+    if(!C[i].startsWith(prefix)) break;
     const li=document.createElement("li");
-    // Afficher la forme accentuée si disponible (mot dans c[]), sinon forme brute
-    const cIdx=_getCMap().get(w);
-    li.textContent=cIdx!==undefined ? (DATA.e[cIdx]||w) : w;
-    li.addEventListener("click",()=>dictSelectWord(w));
+    li.textContent=E[i]||C[i];
+    li.addEventListener("click",()=>dictSelectWord(C[i]));
     frag.appendChild(li);
     count++;
   }
@@ -372,10 +405,10 @@ function wireDictModal(){
       if(e.key==="Escape"){ closeDictModal(); return; }
       if(e.key==="Enter"){
         const v=norm(inp.value); if(!v) return;
-        const D=window.SEQODS_DATA?.d; if(!D) return;
-        // Correspondance exacte dans d[]
-        const start=_dictBisect(D,v);
-        if(start<D.length && D[start]===v){ dictSelectWord(v); return; }
+        const C=window.SEQODS_DATA?.c; if(!C) return;
+        // Correspondance exacte dans c[]
+        const start=_dictBisect(C,v);
+        if(start<C.length && C[start]===v){ dictSelectWord(v); return; }
         // Première suggestion
         const first=document.querySelector("#dict-sugg li:not(.dict-no-result)");
         if(first) first.click();

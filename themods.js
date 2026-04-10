@@ -78,6 +78,7 @@ let tmTheme=null, tmSession=null;
 let tmFound=new Set(), tmSolutions=false, tmNoHelp=true;
 let gmEntryIdx=0, gmFound=new Set();
 let odsEntryIdx=0, odsFnd=new Set();
+let tmBrowse=false, tmBrowseIdx=0;
 
 /* ── Navigation sous-vues ── */
 function showTmView(id){
@@ -94,6 +95,29 @@ function renderTmHome(){
   showTmView("tv-home");
   updateTmStats();
   setDictBtnVisible(true);
+}
+
+function renderTmVerbes(){
+  showTmView("tv-verbes");
+  updateVerbesStats();
+  setDictBtnVisible(true);
+}
+
+function updateVerbesStats(){
+  const viData=window.THEMODS_DATA?.vi||[];
+  let viVal=0; viData.forEach(({label})=>{ if(getSt("vi",label).validated) viVal++; });
+  const viEl=document.getElementById("vi-desc2");
+  if(viEl) viEl.textContent="575 verbes · 193 sessions"+(viVal>0?" · "+viVal+"/"+viData.length+" val.":"");
+
+  const vtData=window.THEMODS_DATA?.vt||[];
+  let vtVal=0; vtData.forEach(({label})=>{ if(getSt("vt",label).validated) vtVal++; });
+  const vtEl=document.getElementById("vt-desc");
+  if(vtEl) vtEl.textContent="4 659 verbes · 1 469 sessions"+(vtVal>0?" · "+vtVal+"/"+vtData.length+" val.":"");
+
+  const vdData=window.THEMODS_DATA?.vd||[];
+  let vdVal=0; vdData.forEach(({label})=>{ if(getSt("vd",label).validated) vdVal++; });
+  const vdEl=document.getElementById("vd-desc");
+  if(vdEl) vdEl.textContent="66 verbes · 42 sessions"+(vdVal>0?" · "+vdVal+"/"+vdData.length+" val.":"");
 }
 
 function renderTmFinales(){
@@ -121,12 +145,12 @@ function updateTmStats(){
   const fEl=document.getElementById("finales-desc");
   if(fEl) fEl.textContent="29 finales"+(totalVal>0?" · "+totalVal+"/"+totalSess+" validées":"");
 
-  // VI
-  const viData=window.THEMODS_DATA?.vi||[];
-  let viVal=0;
-  viData.forEach(({label})=>{ if(getSt("vi",label).validated) viVal++; });
-  const viEl=document.getElementById("vi-desc");
-  if(viEl) viEl.textContent="575 verbes · 193 sessions"+(viVal>0?" · "+viVal+"/"+viData.length+" val.":"");
+  // Verbes
+  const verbesThemes=["vi","vt","vd"];
+  let vTotal=0, vVal=0;
+  verbesThemes.forEach(th=>{ const d=window.THEMODS_DATA?.[th]; if(!d) return; vTotal+=d.length; d.forEach(({label})=>{ if(getSt(th,label).validated) vVal++; }); });
+  const viEl=document.getElementById("verbes-desc");
+  if(viEl) viEl.textContent="3 thèmes · 5 230 verbes"+(vVal>0?" · "+vVal+"/"+vTotal+" validées":"");
 
   // ODS 1-9 (home summary)
   const odsEl=document.getElementById("ods-desc");
@@ -216,7 +240,7 @@ function playTheme(theme){
 }
 
 function startSession(theme, session){
-  tmSession=session; tmFound=new Set(); tmSolutions=false; tmNoHelp=true;
+  tmSession=session; tmFound=new Set(); tmSolutions=false; tmNoHelp=true; tmBrowse=false;
   const edBtn=document.getElementById("gm-ed-btn"); if(edBtn) edBtn.style.display="none";
   getSt(theme, session.label).seen=true;
   getSt(theme, session.label).lastSeen=todayStr();
@@ -238,12 +262,14 @@ const THEME_NAMES={age:"Finale -AGE",vi:"Intransitifs",oir:"Finale -OIR",able:"F
   ais:"Finale -AIS",ois:"Finale -OIS",erie:"Finale -ERIE",et:"Finale -ET",ette:"Finale -ETTE",
   ide:"Finale -IDE",ite:"Finale -ITE",eau:"Finale -EAU",ot:"Finale -OT",um:"Finale -UM",
   eux:"Finale -EUX",ail:"Finale -AIL",al:"Finale -AL",ase:"Finale -ASE",ose:"Finale -OSE",
-  eur:"Finale -EUR",ier:"Finale -IER",ien:"Finale -IEN",isme:"Finale -ISME",iste:"Finale -ISTE"};
+  eur:"Finale -EUR",ier:"Finale -IER",ien:"Finale -IEN",isme:"Finale -ISME",iste:"Finale -ISTE",
+  vt:"Transitifs",vd:"Défectifs"};
 const THEME_SFX={age:"AGE",vi:"",oir:"OIR",able:"ABLE",ique:"IQUE",gm:"",
   ods1:"",ods2:"",ods3:"",ods4:"",ods5:"",ods6:"",ods7:"",ods8:"",ods9:"",
   ure:"URE",ard:"ARD",ant:"ANT",if:"IF",in:"IN",ais:"AIS",ois:"OIS",erie:"ERIE",
   et:"ET",ette:"ETTE",ide:"IDE",ite:"ITE",eau:"EAU",ot:"OT",um:"UM",eux:"EUX",
-  ail:"AIL",al:"AL",ase:"ASE",ose:"OSE",eur:"EUR",ier:"IER",ien:"IEN",isme:"ISME",iste:"ISTE"};
+  ail:"AIL",al:"AL",ase:"ASE",ose:"OSE",eur:"EUR",ier:"IER",ien:"IEN",isme:"ISME",iste:"ISTE",
+  vt:"",vd:""};
 function isOds(th){ return /^ods\d$/.test(th); }
 
 /* ── ODS helper functions ── */
@@ -490,14 +516,58 @@ function isGMResolved(){
   return tmSolutions||entry.forms.every(f=>gmFound.has(norm(f)));
 }
 
+/* ── Feuilletage (stof2 uniquement) ── */
+function startBrowse(){
+  if(!isEditor()) return;
+  tmBrowse=true;
+  if(tmTheme==="gm" || isOds(tmTheme)){
+    // position déjà gérée par gmEntryIdx / odsEntryIdx
+  } else {
+    const data=window.THEMODS_DATA?.[tmTheme]; if(!data) return;
+    const idx=data.findIndex(s=>s.label===tmSession?.label);
+    tmBrowseIdx=idx>=0?idx:0;
+  }
+  tmNoHelp=false;
+  browseShowCurrent();
+}
+function browseShowCurrent(){
+  tmSolutions=true;
+  if(tmTheme==="gm"){ gmFound=new Set(); renderGMGame(); }
+  else if(isOds(tmTheme)){ odsFnd=new Set(); renderOdsGame(); }
+  else {
+    const data=window.THEMODS_DATA?.[tmTheme]; if(!data) return;
+    tmSession=data[tmBrowseIdx%data.length];
+    tmFound=new Set(); renderTmGame();
+  }
+  setTmMsg(""); updateTmBtn();
+}
+function browseNext(){
+  if(!tmBrowse) return;
+  if(tmTheme==="gm"){
+    const all=getAllGMEntries();
+    gmEntryIdx=(gmEntryIdx+1)%all.length; gmFound=new Set();
+  } else if(isOds(tmTheme)){
+    const all=getAllOdsEntries(tmTheme);
+    odsEntryIdx=(odsEntryIdx+1)%all.length; odsFnd=new Set();
+  } else {
+    const data=window.THEMODS_DATA?.[tmTheme]; if(!data) return;
+    tmBrowseIdx=(tmBrowseIdx+1)%data.length;
+  }
+  browseShowCurrent();
+}
+
 function updateTmBtn(){
   const sol=document.getElementById("tm-btn-sol");
   const solKb=document.getElementById("tm-btn-sol-kb");
+  const browseBtn=document.getElementById("tm-btn-browse");
+  const nextBtn=document.getElementById("tm-btn-next");
+  if(browseBtn) browseBtn.style.display=isEditor()&&!tmBrowse?"":"none";
+  if(nextBtn) nextBtn.style.display=tmBrowse?"":"none";
   const gmLike=tmTheme==="gm"||isOds(tmTheme);
 
   [sol,solKb].forEach(b=>{
     if(!b) return;
-    b.style.display="";
+    b.style.display=tmBrowse?"none":"";
     if(gmLike){
       const resolved=tmTheme==="gm"?isGMResolved():isOdsResolved();
       if(resolved){
@@ -843,6 +913,10 @@ function initThemods(){
     document.getElementById("btn-back-finales")?.addEventListener("click",()=>renderTmHome());
     document.getElementById("btn-ods")?.addEventListener("click",()=>renderTmOds());
     document.getElementById("btn-back-ods")?.addEventListener("click",()=>renderTmHome());
+    document.getElementById("btn-verbes")?.addEventListener("click",()=>renderTmVerbes());
+    document.getElementById("btn-back-verbes")?.addEventListener("click",()=>renderTmHome());
+    document.getElementById("tm-btn-browse")?.addEventListener("click",()=>startBrowse());
+    document.getElementById("tm-btn-next")?.addEventListener("click",()=>browseNext());
 
     document.querySelectorAll("#v-themods .tc[data-theme]").forEach(card=>{
       card.addEventListener("click",()=>playTheme(card.dataset.theme));
