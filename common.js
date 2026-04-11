@@ -321,6 +321,26 @@ function dictSelectWord(w){
     document.getElementById("dict-word").textContent=display;
     document.getElementById("dict-def").textContent=
       (DATA.f[cIdx]||"").replace(/^(?:ou\s+)?\[[^\]]*\]\s*/i,"").trim()||"(définition absente)";
+    // Anagrammes
+    const anaEl=document.getElementById("dict-ana");
+    if(anaEl && DATA.a){
+      anaEl.innerHTML="";
+      const tir=w.split("").sort((a,b)=>a.localeCompare(b,"fr")).join("");
+      const anaLst=(DATA.a[tir]||[]).filter(x=>norm(x)!==w).slice(0,60);
+      if(anaLst.length){
+        const lbl=document.createElement("strong"); lbl.textContent="Anagrammes"; anaEl.appendChild(lbl);
+        const sp=document.createElement("span");
+        anaLst.forEach((aw,i)=>{
+          if(i) sp.appendChild(document.createTextNode(" • "));
+          const a=document.createElement("a"); a.href="#"; a.className="def-link";
+          a.textContent=aw;
+          a.addEventListener("click",e=>{ e.preventDefault(); dictSelectWord(norm(aw)); });
+          sp.appendChild(a);
+        });
+        anaEl.appendChild(sp);
+      }
+    } else if(anaEl) anaEl.innerHTML="";
+    // Rallonges
     const lst=DATA.r?.[w]||[];
     const rallEl=document.getElementById("dict-rall");
     if(rallEl){
