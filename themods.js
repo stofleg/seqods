@@ -826,6 +826,10 @@ function renderGMGame(){
       else { t.className="gt empty"; }
       row.appendChild(t);
     }
+    if(revealed){
+      row.style.cursor="pointer";
+      row.addEventListener("click",()=>openDef(norm(form),form));
+    }
     wrap.appendChild(row);
     tilesDiv.appendChild(wrap);
   });
