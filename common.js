@@ -401,7 +401,7 @@ function openDictModal(){
   document.getElementById("dict-sugg").innerHTML="";
   document.getElementById("dict-result").style.display="none";
   dictUpdateLinks("");
-  setTimeout(()=>inp?.focus(), 80);
+  setTimeout(()=>{ if(window.matchMedia("(pointer:fine)").matches) inp?.focus(); }, 80);
 }
 
 function closeDictModal(){
