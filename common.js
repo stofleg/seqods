@@ -393,6 +393,13 @@ function _dictRenderSugg(prefix){
   sugg.appendChild(frag);
 }
 
+function _dictBdResize(){
+  const bd=document.getElementById("dict-bd"); if(!bd) return;
+  const vv=window.visualViewport;
+  const kbH=vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+  bd.style.bottom=kbH+"px";
+}
+
 function openDictModal(){
   const m=document.getElementById("dict-modal"); if(!m) return;
   m.classList.add("open");
@@ -401,11 +408,15 @@ function openDictModal(){
   document.getElementById("dict-sugg").innerHTML="";
   document.getElementById("dict-result").style.display="none";
   dictUpdateLinks("");
+  _dictBdResize();
+  window.visualViewport?.addEventListener("resize", _dictBdResize);
   setTimeout(()=>{ if(window.matchMedia("(pointer:fine)").matches) inp?.focus(); }, 80);
 }
 
 function closeDictModal(){
   document.getElementById("dict-modal")?.classList.remove("open");
+  window.visualViewport?.removeEventListener("resize", _dictBdResize);
+  const bd=document.getElementById("dict-bd"); if(bd) bd.style.bottom="";
 }
 
 function wireDictModal(){
