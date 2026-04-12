@@ -410,7 +410,7 @@ function openDictModal(){
   dictUpdateLinks("");
   _dictBdResize();
   window.visualViewport?.addEventListener("resize", _dictBdResize);
-  setTimeout(()=>{ if(window.matchMedia("(pointer:fine)").matches) inp?.focus(); }, 80);
+  setTimeout(()=>inp?.focus(), 80);
 }
 
 function closeDictModal(){
