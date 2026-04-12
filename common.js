@@ -423,7 +423,6 @@ function wireDictModal(){
   document.getElementById("btn-dict")?.addEventListener("click", openDictModal);
   document.querySelectorAll(".btn-dict-kb").forEach(b=>b.addEventListener("click", openDictModal));
   document.getElementById("dict-close")?.addEventListener("click", closeDictModal);
-  document.getElementById("dict-bd")?.addEventListener("click", closeDictModal);
 
   const inp=document.getElementById("dict-input");
   if(inp){
