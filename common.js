@@ -410,7 +410,9 @@ function openDictModal(){
   dictUpdateLinks("");
   _dictBdResize();
   window.visualViewport?.addEventListener("resize", _dictBdResize);
-  inp?.focus();
+  // Force reflow so the modal is rendered before focus() — required on iOS PWA
+  // eslint-disable-next-line no-unused-expressions
+  inp && (inp.offsetHeight, inp.focus());
 }
 
 function closeDictModal(){
