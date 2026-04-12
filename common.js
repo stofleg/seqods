@@ -419,9 +419,14 @@ function closeDictModal(){
   const bd=document.getElementById("dict-bd"); if(bd) bd.style.bottom="";
 }
 
+function _wireDictBtn(el){
+  if(!el) return;
+  el.addEventListener("touchend", e=>{ e.preventDefault(); openDictModal(); });
+  el.addEventListener("click", openDictModal);
+}
 function wireDictModal(){
-  document.getElementById("btn-dict")?.addEventListener("click", openDictModal);
-  document.querySelectorAll(".btn-dict-kb").forEach(b=>b.addEventListener("click", openDictModal));
+  _wireDictBtn(document.getElementById("btn-dict"));
+  document.querySelectorAll(".btn-dict-kb").forEach(b=>_wireDictBtn(b));
   document.getElementById("dict-close")?.addEventListener("click", closeDictModal);
 
   const inp=document.getElementById("dict-input");
