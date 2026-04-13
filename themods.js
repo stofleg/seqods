@@ -414,17 +414,18 @@ function renderTmGame(){
   sess.words.forEach((word,i)=>{
     const li=document.createElement("li");
     li.dataset.idx=i; li.className="slot";
-    const display=getNormToE()[word]||word;
-    const cousin=sess.cousins?.[word];
+    const canon=norm(word);
+    const display=getNormToE()[canon]||word;
+    const cousin=sess.cousins?.[canon];
     const fullDisplay=cousin?display+" (→ "+cousin+")":display;
     if(tmFound.has(i)){
       li.classList.add("found","clickable");
       li.textContent=fullDisplay;
-      li.addEventListener("click",()=>openDef(word,display));
+      li.addEventListener("click",()=>openDef(canon,display));
     } else if(tmSolutions){
       li.classList.add("revealed","clickable");
       li.textContent=fullDisplay;
-      li.addEventListener("click",()=>openDef(word,display));
+      li.addEventListener("click",()=>openDef(canon,display));
     }
     list.appendChild(li);
   });
@@ -459,11 +460,12 @@ function validateTmWord(raw){
     const li=document.querySelector("#tm-wlist li[data-idx='"+i+"']");
     if(li){
       const w=sess.words[i];
-      const display=getNormToE()[w]||w;
-      const cousin=sess.cousins?.[w];
+      const wc=norm(w);
+      const display=getNormToE()[wc]||w;
+      const cousin=sess.cousins?.[wc];
       li.className="slot found clickable";
       li.textContent=cousin?display+" (→ "+cousin+")":display;
-      li.addEventListener("click",()=>openDef(w,display));
+      li.addEventListener("click",()=>openDef(wc,display));
       li.scrollIntoView({behavior:"smooth",block:"nearest"});
     }
   });
@@ -484,11 +486,12 @@ function showTmSolutions(){
       tmFound.add(i);
       const li=document.querySelector("#tm-wlist li[data-idx='"+i+"']");
       if(li){
-        const display=getNormToE()[w]||w;
-        const cousin=sess.cousins?.[w];
+        const wc=norm(w);
+        const display=getNormToE()[wc]||w;
+        const cousin=sess.cousins?.[wc];
         li.className="slot revealed clickable";
         li.textContent=cousin?display+" (→ "+cousin+")":display;
-        li.addEventListener("click",()=>openDef(w,display));
+        li.addEventListener("click",()=>openDef(wc,display));
       }
     }
   });
