@@ -233,10 +233,19 @@ function playTheme(theme){
 
   const unseenPool=data.filter(({label})=>!getSt(theme,label).seen);
   const srsPool=data.filter(({label})=>{ const s=getSt(theme,label); return s.seen&&!s.validated&&s.due<=today; });
+  const lockedPool=data.filter(({label})=>{ const s=getSt(theme,label); return s.seen&&!s.validated&&s.due>today; });
 
   if(unseenPool.length){ startSession(theme, unseenPool[Math.floor(Math.random()*unseenPool.length)]); return; }
   if(srsPool.length){ showSrsPrompt(theme, srsPool); return; }
-  if(msg){msg.textContent="Toutes les sessions sont validées !";msg.className="tm-msg ok";}
+  if(lockedPool.length){
+    // Sessions non validées mais en cooldown SRS — on joue quand même
+    startSession(theme, lockedPool[Math.floor(Math.random()*lockedPool.length)]); return;
+  }
+  if(msg){
+    const total=data.length, val=data.filter(({label})=>getSt(theme,label).validated).length;
+    msg.textContent= val===total ? "Toutes les sessions sont validées ! 🎉" : "Aucune session disponible.";
+    msg.className="tm-msg ok";
+  }
 }
 
 function startSession(theme, session){
