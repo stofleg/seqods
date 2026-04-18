@@ -142,6 +142,12 @@ function updateTmStats(){
   const gmEl=document.getElementById("gm-desc");
   if(gmEl) gmEl.textContent="1 808 groupes"+fmtPct(prog.done,gmTotal);
 
+  // Double Nature
+  const dnProg=getDNProgress();
+  const dnTotal=getAllDNEntries().length;
+  const dnEl=document.getElementById("dn-desc");
+  if(dnEl) dnEl.textContent=dnTotal+" mots"+fmtPct(dnProg.done,dnTotal);
+
   // Finales
   const finales=["able","age","ique","oir","ure","ard","ant","if","in","ais","ois","erie","et","ette","ide","ite","eau","ot","um","eux","ail","al","ase","ose","eur","ier","ien","isme","iste"];
   let totalSess=0, totalVal=0;
@@ -233,6 +239,7 @@ function showSrsPrompt(theme, srsPool){
 function playTheme(theme){
   tmTheme=theme;
   if(theme==="gm"){ startGM(); return; }
+  if(theme==="dn"){ startDN(); return; }
   if(isOds(theme)){ startOds(theme); return; }
   const data=window.THEMODS_DATA?.[theme]; if(!data) return;
   const today=todayStr();
@@ -452,6 +459,7 @@ function validateTmWord(raw){
     return;
   }
   if(tmTheme==="gm"){ validateGMWord(n); return; }
+  if(tmTheme==="dn"){ validateDNWord(n); return; }
   if(isOds(tmTheme)){ validateOdsWord(n); return; }
   const sess=tmSession; if(!sess) return;
   const matched=[];
@@ -493,6 +501,7 @@ function validateTmWord(raw){
 function showTmSolutions(){
   tmNoHelp=false;
   if(tmTheme==="gm"){ tmSolutions=true; renderGMGame(); updateTmBtn(); return; }
+  if(tmTheme==="dn"){ tmSolutions=true; renderDNGame(); updateTmBtn(); return; }
   if(isOds(tmTheme)){ tmSolutions=true; renderOdsGame(); updateTmBtn(); return; }
   const sess=tmSession; if(!sess) return;
   sess.words.forEach((w,i)=>{
@@ -597,13 +606,13 @@ function updateTmBtn(){
     browseBtn.classList.toggle("btn-danger", tmBrowse);
   }
   if(nextBtn) nextBtn.style.display=tmBrowse?"":"none";
-  const gmLike=tmTheme==="gm"||isOds(tmTheme);
+  const gmLike=tmTheme==="gm"||tmTheme==="dn"||isOds(tmTheme);
 
   [sol,solKb].forEach(b=>{
     if(!b) return;
     b.style.display=tmBrowse?"none":"";
     if(gmLike){
-      const resolved=tmTheme==="gm"?isGMResolved():isOdsResolved();
+      const resolved=tmTheme==="gm"?isGMResolved():tmTheme==="dn"?isDNResolved():isOdsResolved();
       if(resolved){
         b.textContent="Jouer"; b.classList.remove("btn-danger"); b.classList.add("btn-primary");
       } else {
@@ -882,6 +891,105 @@ function validateGMWord(n){
   updateTmBtn();
 }
 
+/* ── Double Nature ── */
+let dnEntryIdx=0, dnFound=false;
+
+function getDNProgress(){
+  if(!tmState.themes) tmState.themes={};
+  if(!tmState.themes.dn) tmState.themes.dn={};
+  if(!tmState.themes.dn._p) tmState.themes.dn._p={idx:0,done:0,order:null};
+  return tmState.themes.dn._p;
+}
+function getAllDNEntries(){ return window.THEMODS_DATA?.dn||[]; }
+function currentDNEntry(){
+  const all=getAllDNEntries(), prog=getDNProgress();
+  const realIdx=prog.order?.[dnEntryIdx];
+  return realIdx!==undefined ? all[realIdx] : null;
+}
+function isDNResolved(){ return dnFound||tmSolutions; }
+
+function startDN(){
+  const all=getAllDNEntries(), prog=getDNProgress();
+  if(!prog.order||prog.order.length!==all.length){
+    prog.order=shuffleArray(all.map((_,i)=>i)); prog.idx=0; prog.done=0;
+  }
+  if(prog.idx>=all.length){ prog.order=shuffleArray(all.map((_,i)=>i)); prog.idx=0; }
+  dnEntryIdx=prog.idx; dnFound=false; tmSolutions=false; tmNoHelp=true; tmBrowse=false;
+  setDictBtnVisible(false);
+  showTmView("tv-game");
+  document.getElementById("gm-ed-btn")?.style && (document.getElementById("gm-ed-btn").style.display="none");
+  document.getElementById("tm-gtitle").textContent="Double nature";
+  const lbl=document.getElementById("tm-session-label"); if(lbl) lbl.textContent="";
+  updateTmBtn(); setTmMsg(""); renderDNGame();
+  if(tmKb) tmKb.clear();
+  setTimeout(()=>{ if(window.matchMedia("(pointer:fine)").matches) document.getElementById("tm-saisie")?.focus(); },80);
+}
+
+function renderDNGame(){
+  const all=getAllDNEntries(), prog=getDNProgress();
+  const entry=currentDNEntry();
+  const list=document.getElementById("tm-wlist"); if(!list) return;
+  list.innerHTML="";
+  if(!entry){ setTmMsg("Toutes les entrées terminées !","ok"); return; }
+  const canon=entry.canon;
+  const revealed=isDNResolved();
+
+  // Tuiles (initiale + cases vides)
+  const tilesDiv=document.createElement("div"); tilesDiv.className="gm-tiles";
+  const row=document.createElement("div"); row.className="gm-row";
+  for(let i=0;i<canon.length;i++){
+    const t=document.createElement("span");
+    if(revealed){ t.className="gt "+(dnFound?"ok":"miss"); t.textContent=canon[i]; }
+    else if(i===0){ t.className="gt init"; t.textContent=canon[0]; }
+    else { t.className="gt empty"; }
+    row.appendChild(t);
+  }
+  if(revealed){
+    row.style.cursor="pointer";
+    row.addEventListener("click",()=>openDef(canon, entry.defs[0].d, entry.defs[0].f));
+  }
+  tilesDiv.appendChild(row);
+  list.appendChild(tilesDiv);
+
+  // Blocs de définitions
+  entry.defs.forEach(def=>{
+    const block=document.createElement("div"); block.className="dn-block"+(revealed?" clickable":"");
+    if(revealed) block.addEventListener("click",()=>openDef(canon, def.d, def.f));
+    const posEl=document.createElement("span"); posEl.className="dn-pos";
+    const pos=_posLabel(def.f);
+    posEl.textContent=(revealed?def.d:canon[0]+"…")+(pos?" "+pos:"");
+    block.appendChild(posEl);
+    const defEl=document.createElement("span"); defEl.className="dn-def-text";
+    defEl.textContent=(def.f||"").replace(/^(?:ou\s+)?\[[^\]]*\]\s*/i,"").trim()||"(définition absente)";
+    block.appendChild(defEl);
+    list.appendChild(block);
+  });
+
+  // Compteur
+  if(revealed){
+    const nav=document.createElement("div"); nav.className="gm-nav";
+    const pos=document.createElement("span"); pos.className="gm-pos";
+    pos.textContent=(dnEntryIdx+1)+" / "+all.length;
+    nav.appendChild(pos); list.appendChild(nav);
+  }
+}
+
+function validateDNWord(n){
+  const entry=currentDNEntry(); if(!entry) return;
+  if(norm(entry.canon)!==n){
+    setTmMsg(getTmDict().has(n)?"Hors-jeu — mot valide mais pas dans cette liste.":"Mot non valide.",
+             getTmDict().has(n)?"warn":"err");
+    return;
+  }
+  dnFound=true;
+  const prog=getDNProgress();
+  prog.done=(prog.done||0)+1; prog.idx=dnEntryIdx+1;
+  setTmMsg("✓ Trouvé !","ok");
+  setDictBtnVisible(true);
+  renderDNGame(); updateTmBtn();
+  persistThemods().catch(()=>{});
+}
+
 /* ── Init (une seule fois) ── */
 function initThemods(){
   if(!tmInited){
@@ -905,6 +1013,14 @@ function initThemods(){
           if(tmKb) tmKb.clear();
           persistThemods().catch(()=>{});
         } else { showTmSolutions(); }
+      } else if(tmTheme==="dn"){
+        if(isDNResolved()){
+          const prog=getDNProgress();
+          dnEntryIdx++; prog.idx=dnEntryIdx; dnFound=false; tmSolutions=false;
+          updateTmBtn(); setTmMsg(""); renderDNGame();
+          if(tmKb) tmKb.clear();
+          persistThemods().catch(()=>{});
+        } else { showTmSolutions(); }
       } else if(isOds(tmTheme)){
         if(isOdsResolved()){
           const prog=getOdsProgress(tmTheme);
@@ -924,7 +1040,7 @@ function initThemods(){
     document.getElementById("btn-back-game")?.addEventListener("click",()=>{
       tmBrowse=false;
       if(isOds(tmTheme)) renderTmOds();
-      else if(window.THEMODS_DATA?.[tmTheme]&&!["gm","vi","vt","vd"].includes(tmTheme)) renderTmFinales();
+      else if(window.THEMODS_DATA?.[tmTheme]&&!["gm","dn","vi","vt","vd"].includes(tmTheme)) renderTmFinales();
       else if(["vi","vt","vd"].includes(tmTheme)) renderTmVerbes();
       else renderTmHome();
     });

@@ -315,6 +315,15 @@ body.kb-open .tm-hdr .prog-row{ display:none; }
 .tc-o{background:rgba(255,165,60,.1);border-color:rgba(255,165,60,.28);}
 .tc-o:hover{background:rgba(255,165,60,.18);}
 .tc-o .tc-lbl,.tc-o .tc-arr{color:#e07800;}
+.tc-dn{background:rgba(236,72,153,.1);border-color:rgba(236,72,153,.28);}
+.tc-dn:hover{background:rgba(236,72,153,.18);}
+.tc-dn .tc-lbl,.tc-dn .tc-arr{color:#ec4899;}
+/* Double Nature blocs */
+.dn-block{padding:10px 14px;border-bottom:1px solid var(--stroke);display:flex;flex-direction:column;gap:4px;}
+.dn-block.clickable{cursor:pointer;transition:background .12s;}
+.dn-block.clickable:hover,.dn-block.clickable:active{background:rgba(255,255,255,.07);}
+.dn-pos{font-size:12px;font-weight:900;color:var(--accent);letter-spacing:.04em;}
+.dn-def-text{font-size:13px;line-height:1.5;color:var(--txt);}
 @media(prefers-color-scheme:light){
   .tc-f{background:#e8f0ff;border-color:rgba(26,101,214,.28);}
   .tc-f:hover{background:#d4e4ff;}.tc-f .tc-lbl,.tc-f .tc-arr{color:#1a65d6;}
@@ -324,6 +333,9 @@ body.kb-open .tm-hdr .prog-row{ display:none; }
   .tc-v:hover{background:#e4d8ff;}.tc-v .tc-lbl,.tc-v .tc-arr{color:#6b35c2;}
   .tc-o{background:#fff3e0;border-color:rgba(200,100,0,.28);}
   .tc-o:hover{background:#ffe0b2;}.tc-o .tc-lbl,.tc-o .tc-arr{color:#c05000;}
+  .tc-dn{background:#fce7f3;border-color:rgba(190,24,93,.28);}
+  .tc-dn:hover{background:#fbcfe8;}.tc-dn .tc-lbl,.tc-dn .tc-arr{color:#be185d;}
+  .dn-block.clickable:hover,.dn-block.clickable:active{background:rgba(0,0,0,.04);}
 }
 /* GM tiles */
 .gm-def{text-align:center;padding:18px 16px 14px;font-size:16px;font-weight:800;line-height:1.5;border-bottom:1px solid var(--stroke);}
@@ -609,6 +621,10 @@ body.kb-open .slot{min-height:28px;font-size:12px;}
             <div><div class="tc-lbl">Graphies multiples</div><div class="tc-desc" id="gm-desc">1 808 groupes</div></div>
             <span class="tc-arr">›</span>
           </div>
+          <div class="tc tc-dn" data-theme="dn">
+            <div><div class="tc-lbl">Double nature</div><div class="tc-desc" id="dn-desc">650 mots</div></div>
+            <span class="tc-arr">›</span>
+          </div>
           <div class="tc tc-v" id="btn-verbes">
             <div><div class="tc-lbl">Verbes</div><div class="tc-desc" id="verbes-desc">3 thèmes · 5 539 verbes</div></div>
             <span class="tc-arr">›</span>
@@ -835,7 +851,7 @@ body.kb-open .slot{min-height:28px;font-size:12px;}
   position:fixed;bottom:4px;left:8px;z-index:9999;
   font-size:9px;font-weight:700;color:rgba(255,255,255,.28);
   font-family:ui-monospace,monospace;letter-spacing:.04em;
-  pointer-events:none;user-select:none;">v3.11</div>
+  pointer-events:none;user-select:none;">v3.12</div>
 
 <script src="data.js"></script>
 <script src="themods_data.js"></script>

@@ -176,14 +176,14 @@ function openDefSimple(defText){
   mEl.classList.add("open");
 }
 
-function openDef(canon, displayWord){
+function openDef(canon, displayWord, defText){
   const DATA = window.SEQODS_DATA;
   if(!DATA) return;
   const C=DATA.c, E=DATA.e, F=DATA.f, A=DATA.a, R=DATA.r;
 
   const idx = C.indexOf(canon);
   const title = (displayWord || (idx>=0 ? E[idx].split(",")[0].trim() : canon)).replace(/\*/g,"");
-  const def = idx>=0 ? (F[idx]||"") : "";
+  const def = (defText !== undefined) ? defText : (idx>=0 ? (F[idx]||"") : "");
 
   $("#def-title").textContent = title;
   $("#def-body").textContent = def || "(définition absente)";
