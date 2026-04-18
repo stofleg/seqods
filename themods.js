@@ -917,7 +917,8 @@ function startDN(){
   dnEntryIdx=prog.idx; dnFound=false; tmSolutions=false; tmNoHelp=true; tmBrowse=false;
   setDictBtnVisible(false);
   showTmView("tv-game");
-  document.getElementById("gm-ed-btn")?.style && (document.getElementById("gm-ed-btn").style.display="none");
+  const edBtn=document.getElementById("gm-ed-btn");
+  if(edBtn) edBtn.style.display=isEditor()?"":"none";
   document.getElementById("tm-gtitle").textContent="Double nature";
   const lbl=document.getElementById("tm-session-label"); if(lbl) lbl.textContent="";
   updateTmBtn(); setTmMsg(""); renderDNGame();
@@ -926,7 +927,7 @@ function startDN(){
 }
 
 function renderDNGame(){
-  const all=getAllDNEntries(), prog=getDNProgress();
+  const all=getAllDNEntries();
   const entry=currentDNEntry();
   const list=document.getElementById("tm-wlist"); if(!list) return;
   list.innerHTML="";
@@ -934,7 +935,24 @@ function renderDNGame(){
   const canon=entry.canon;
   const revealed=isDNResolved();
 
-  // Tuiles (initiale + cases vides)
+  // Defs effectives (custom override or default)
+  const custom=getDNCustom(entry);
+  const defs=entry.defs.map((d,i)=>({
+    d: d.d,
+    f: custom.defs?.[i]!==undefined ? custom.defs[i] : d.f
+  }));
+
+  // Blocs de définitions AU-DESSUS des tuiles
+  defs.forEach((def,i)=>{
+    const block=document.createElement("div");
+    block.className="gm-def"+(revealed?" clickable":"");
+    const text=(def.f||"").replace(/^(?:ou\s+)?\[[^\]]*\]\s*/i,"").trim()||"(définition absente)";
+    block.textContent=text;
+    if(revealed) block.addEventListener("click",()=>openDef(canon, def.d, def.f));
+    list.appendChild(block);
+  });
+
+  // Tuiles (initiale + cases vides) EN DESSOUS
   const tilesDiv=document.createElement("div"); tilesDiv.className="gm-tiles";
   const row=document.createElement("div"); row.className="gm-row";
   for(let i=0;i<canon.length;i++){
@@ -946,24 +964,10 @@ function renderDNGame(){
   }
   if(revealed){
     row.style.cursor="pointer";
-    row.addEventListener("click",()=>openDef(canon, entry.defs[0].d, entry.defs[0].f));
+    row.addEventListener("click",()=>openDef(canon, defs[0].d, defs[0].f));
   }
   tilesDiv.appendChild(row);
   list.appendChild(tilesDiv);
-
-  // Blocs de définitions
-  entry.defs.forEach(def=>{
-    const block=document.createElement("div"); block.className="dn-block"+(revealed?" clickable":"");
-    if(revealed) block.addEventListener("click",()=>openDef(canon, def.d, def.f));
-    const posEl=document.createElement("span"); posEl.className="dn-pos";
-    const pos=_posLabel(def.f);
-    posEl.textContent=(revealed?def.d:canon[0]+"…")+(pos?" "+pos:"");
-    block.appendChild(posEl);
-    const defEl=document.createElement("span"); defEl.className="dn-def-text";
-    defEl.textContent=(def.f||"").replace(/^(?:ou\s+)?\[[^\]]*\]\s*/i,"").trim()||"(définition absente)";
-    block.appendChild(defEl);
-    list.appendChild(block);
-  });
 
   // Compteur
   if(revealed){
@@ -988,6 +992,101 @@ function validateDNWord(n){
   setDictBtnVisible(true);
   renderDNGame(); updateTmBtn();
   persistThemods().catch(()=>{});
+}
+
+/* ── Éditeur Double Nature ── */
+function getDNCustom(entry){
+  return tmState.themes?.dn?._custom?.[entry.canon] || {};
+}
+function setDNCustom(entry, data){
+  if(!tmState.themes) tmState.themes={};
+  if(!tmState.themes.dn) tmState.themes.dn={};
+  if(!tmState.themes.dn._custom) tmState.themes.dn._custom={};
+  const prev=tmState.themes.dn._custom[entry.canon]||{};
+  tmState.themes.dn._custom[entry.canon]={...prev,...data};
+  persistThemods().catch(()=>{});
+}
+
+function openDNEditor(){
+  const entry=currentDNEntry(); if(!entry) return;
+  const custom=getDNCustom(entry);
+  const container=document.getElementById("dn-ed-defs"); if(!container) return;
+  container.innerHTML="";
+  entry.defs.forEach((def,i)=>{
+    const label=document.createElement("label");
+    label.style.cssText="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:var(--accent);";
+    label.textContent="Définition "+(i+1)+" ("+def.d+")";
+    const ta=document.createElement("textarea");
+    ta.className="gm-ed-textarea"; ta.rows=3; ta.dataset.defIdx=i;
+    ta.value=custom.defs?.[i]!==undefined ? custom.defs[i] : (def.f||"");
+    container.appendChild(label);
+    container.appendChild(ta);
+  });
+  const res=document.getElementById("dn-ed-wikt-res"); if(res) res.innerHTML="";
+  document.getElementById("dn-editor").style.display="";
+  container.querySelector("textarea")?.focus();
+}
+function closeDNEditor(){
+  document.getElementById("dn-editor").style.display="none";
+  const res=document.getElementById("dn-ed-wikt-res"); if(res) res.innerHTML="";
+}
+function saveDNEditor(){
+  const entry=currentDNEntry(); if(!entry) return;
+  const container=document.getElementById("dn-ed-defs"); if(!container) return;
+  const defs=[];
+  container.querySelectorAll("textarea").forEach((ta,i)=>{ defs[i]=ta.value.trim(); });
+  setDNCustom(entry,{defs});
+  closeDNEditor();
+  renderDNGame();
+}
+async function fetchWiktForDN(){
+  const entry=currentDNEntry(); if(!entry) return;
+  const res=document.getElementById("dn-ed-wikt-res"); if(!res) return;
+  res.innerHTML="<span style='color:var(--muted);font-size:12px;'>Chargement…</span>";
+  const word=entry.canon.toLowerCase().replace(/[Œœ]/g,"oe").replace(/[Ææ]/g,"ae");
+  try{
+    const resp=await fetch("https://fr.wiktionary.org/api/rest_v1/page/definition/"+encodeURIComponent(word));
+    if(!resp.ok) throw new Error("HTTP "+resp.status);
+    const data=await resp.json();
+    const frSections=data.fr||[];
+    if(!frSections.length){ res.innerHTML="<span style='color:var(--muted);font-size:12px;'>Aucune définition trouvée.</span>"; return; }
+    res.innerHTML="";
+    frSections.forEach(section=>{
+      const h=document.createElement("div");
+      h.style.cssText="font-size:11px;font-weight:900;color:var(--accent);margin:8px 0 4px;text-transform:uppercase;";
+      h.textContent=section.partOfSpeech||"";
+      res.appendChild(h);
+      (section.definitions||[]).slice(0,3).forEach((defObj,di)=>{
+        const defText=(typeof defObj==="string"?defObj:(defObj.definition||"")).replace(/<[^>]*>/g,"").trim();
+        if(!defText) return;
+        const row=document.createElement("div");
+        row.style.cssText="display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;";
+        const txt=document.createElement("span");
+        txt.style.cssText="font-size:12px;flex:1;line-height:1.4;color:var(--txt);";
+        txt.textContent=(di+1)+". "+defText;
+        row.appendChild(txt);
+        const container=document.getElementById("dn-ed-defs");
+        (container?container.querySelectorAll("textarea"):[]).forEach((ta,si)=>{
+          const btn=document.createElement("button");
+          btn.className="btn"; btn.style.cssText="font-size:11px;padding:2px 6px;flex-shrink:0;";
+          btn.textContent="→"+(si+1);
+          btn.addEventListener("click",()=>{
+            const pos=(section.partOfSpeech||"").toLowerCase();
+            let posLabel="";
+            if(/verbe/i.test(pos)) posLabel="v.";
+            else if(/nom/i.test(pos)) posLabel=/féminin/i.test(pos)?"n.f.":"n.m.";
+            else if(/adjectif/i.test(pos)) posLabel="adj.";
+            else if(/adverbe/i.test(pos)) posLabel="adv.";
+            ta.value=(posLabel?posLabel+" ":"")+defText;
+          });
+          row.appendChild(btn);
+        });
+        res.appendChild(row);
+      });
+    });
+  }catch(e){
+    res.innerHTML="<span style='color:var(--err);font-size:12px;'>Erreur : "+e.message+"</span>";
+  }
 }
 
 /* ── Init (une seule fois) ── */
@@ -1045,11 +1144,21 @@ function initThemods(){
       else renderTmHome();
     });
 
-    // GM éditeur
-    document.getElementById("gm-ed-btn")?.addEventListener("click",()=>openGMEditor());
+    // GM / DN éditeur
+    document.getElementById("gm-ed-btn")?.addEventListener("click",()=>{
+      if(tmTheme==="dn") openDNEditor(); else openGMEditor();
+    });
     document.getElementById("gm-ed-close")?.addEventListener("click",()=>closeGMEditor());
     document.getElementById("gm-ed-cancel")?.addEventListener("click",()=>closeGMEditor());
     document.getElementById("gm-ed-save")?.addEventListener("click",()=>saveGMEditor());
+    // DN éditeur
+    document.getElementById("dn-ed-close")?.addEventListener("click",()=>closeDNEditor());
+    document.getElementById("dn-ed-cancel")?.addEventListener("click",()=>closeDNEditor());
+    document.getElementById("dn-ed-save")?.addEventListener("click",()=>saveDNEditor());
+    document.getElementById("dn-ed-wikt")?.addEventListener("click",()=>fetchWiktForDN());
+    document.getElementById("dn-editor")?.addEventListener("click",e=>{
+      if(e.target===document.getElementById("dn-editor")) closeDNEditor();
+    });
     document.getElementById("gm-ed-del-img")?.addEventListener("click",()=>{
       gmEdPendingImg=null;
       const imgWrap=document.getElementById("gm-ed-img-wrap");
