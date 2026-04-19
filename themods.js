@@ -908,6 +908,16 @@ function currentDNEntry(){
 }
 function isDNResolved(){ return dnFound||tmSolutions; }
 
+function findDNVerb(canon){
+  const C=window.SEQODS_DATA?.c||[], F=window.SEQODS_DATA?.f||[];
+  if(!C.length) return null;
+  for(const cand of [canon+"R", canon+"ER"]){
+    const i=_dictBisect(C, cand);
+    if(C[i]===cand && (_posLabel(F[i]||"")||"")[0]==="v") return cand;
+  }
+  return null;
+}
+
 function startDN(){
   const all=getAllDNEntries(), prog=getDNProgress();
   if(!prog.order||prog.order.length!==all.length){
@@ -968,6 +978,20 @@ function renderDNGame(){
   }
   tilesDiv.appendChild(row);
   list.appendChild(tilesDiv);
+
+  // Note verbe éventuel
+  if(revealed){
+    const verb=findDNVerb(canon);
+    if(verb){
+      const C=window.SEQODS_DATA?.c||[], F=window.SEQODS_DATA?.f||[];
+      const vi=_dictBisect(C,verb);
+      const note=document.createElement("div");
+      note.style.cssText="text-align:center;font-size:13px;color:var(--muted);padding:6px 16px 2px;font-style:italic;cursor:pointer;";
+      note.textContent="→ verbe "+verb+" également valide";
+      note.addEventListener("click",()=>openDef(verb, verb, vi>=0&&C[vi]===verb?F[vi]:""));
+      list.appendChild(note);
+    }
+  }
 
   // Compteur
   if(revealed){
