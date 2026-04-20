@@ -126,22 +126,22 @@ function initAuth(){
 
 /* ── Après login ── */
 async function afterLogin(){
-  await Promise.all([loadMethodsState(), loadThemodsState()]);
-  ["user-chip","tm-user-chip"].forEach(id=>{
+  await Promise.all([loadMethodsState(), loadThemodsState(), loadEntreModsState()]);
+  ["user-chip","tm-user-chip","em-user-chip"].forEach(id=>{
     const el=document.getElementById(id);
     if(el) el.textContent=currentUser.pseudo;
   });
   showView("v-select");
   setDictBtnVisible(true);
   // interval auto-persist
-  setInterval(()=>{ persistMethodsState().catch(()=>{}); persistThemods().catch(()=>{}); }, 60000);
+  setInterval(()=>{ persistMethodsState().catch(()=>{}); persistThemods().catch(()=>{}); persistEntreModsState().catch(()=>{}); }, 60000);
 }
 
 /* ── Select ── */
 function initSelect(){
-  document.getElementById("btn-go-methods")?.addEventListener("click", ()=>{
-    showView("v-methods");
-    initMethods();
+  document.getElementById("btn-go-entremods")?.addEventListener("click", ()=>{
+    showView("v-entremods");
+    ensureEntreModsInit();
   });
   document.getElementById("btn-go-themods")?.addEventListener("click", ()=>{
     showView("v-themods");
@@ -158,17 +158,26 @@ function initNav(){
     setDictBtnVisible(true);
     initThemods();
   });
-  // THEMODS → METHODS
+  // THEMODS → ENTREMODS
   document.getElementById("btn-tm-back")?.addEventListener("click", ()=>{
-    showView("v-methods");
-    ensureMethodsInit(); // init complet si jamais visité, sinon stats sans reset de partie
+    showView("v-entremods");
+    ensureEntreModsInit();
   });
-  // Déconnexion (METHODS + THEMODS)
-  const doLogout=()=>{ chronoStop(); clearSession(); currentUser=null; setDictBtnVisible(false); showView("v-auth"); };
+  // ENTREMODS → THEMODS
+  document.getElementById("em-btn-to-themods")?.addEventListener("click", ()=>{
+    emChronoStop();
+    showView("v-themods");
+    setDictBtnVisible(true);
+    initThemods();
+  });
+  // Déconnexion (METHODS + THEMODS + ENTREMODS)
+  const doLogout=()=>{ chronoStop(); emChronoStop(); clearSession(); currentUser=null; setDictBtnVisible(false); showView("v-auth"); };
   document.getElementById("btn-logout")?.addEventListener("click", doLogout);
   document.getElementById("btn-tm-logout")?.addEventListener("click", doLogout);
-  // Settings THEMODS (placeholder — panneau vide pour l'instant)
-  document.getElementById("btn-tm-settings")?.addEventListener("click", ()=>{});
+  document.getElementById("em-btn-logout")?.addEventListener("click", doLogout);
+  // Settings — shared panel
+  document.getElementById("btn-tm-settings")?.addEventListener("click", ()=>openSettingsPanel());
+  document.getElementById("em-btn-settings")?.addEventListener("click", ()=>openSettingsPanel());
   // F1
   document.addEventListener("keydown", e=>{
     if(e.key==="F1"){
@@ -176,25 +185,26 @@ function initNav(){
       const v=document.querySelector(".view.active")?.id;
       if(v==="v-methods" && mSolutionsShown) methodsReplay();
       if(v==="v-themods") tmReplay();
+      if(v==="v-entremods") emReplay();
     }
     if(e.key==="Escape") closeDef();
   });
 }
 
 /* ── Settings UI ── */
+function openSettingsPanel(){
+  document.getElementById("set-abc").checked=settings.showAbc;
+  document.getElementById("set-def").checked=settings.showDef;
+  document.getElementById("set-len").checked=settings.showLen;
+  document.getElementById("set-chrono").checked=settings.chronoEnabled;
+  document.getElementById("set-dur").value=settings.chronoDur;
+  document.getElementById("chrono-lbl").textContent=settings.chronoDur+" min";
+  document.getElementById("row-dur").style.display=settings.chronoEnabled?"":"none";
+  document.getElementById("settings")?.classList.add("open");
+}
 function initSettingsUI(){
-  const overlay=document.getElementById("settings");
-  document.getElementById("btn-settings")?.addEventListener("click", ()=>{
-    document.getElementById("set-abc").checked=settings.showAbc;
-    document.getElementById("set-def").checked=settings.showDef;
-    document.getElementById("set-len").checked=settings.showLen;
-    document.getElementById("set-chrono").checked=settings.chronoEnabled;
-    document.getElementById("set-dur").value=settings.chronoDur;
-    document.getElementById("chrono-lbl").textContent=settings.chronoDur+" min";
-    document.getElementById("row-dur").style.display=settings.chronoEnabled?"":"none";
-    overlay.classList.add("open");
-  });
-  const close=()=>overlay.classList.remove("open");
+  document.getElementById("btn-settings")?.addEventListener("click", ()=>openSettingsPanel());
+  const close=()=>document.getElementById("settings")?.classList.remove("open");
   document.getElementById("btn-close-settings")?.addEventListener("click",close);
   document.getElementById("settings-bd")?.addEventListener("click",close);
 
