@@ -685,6 +685,10 @@ body.kb-open .slot{min-height:28px;font-size:12px;}
       <div class="em-ghdr">
         <span id="em-game-title" style="font-size:13px;font-weight:800;color:var(--accent);flex:1;"></span>
         <span id="em-chrono" class="chrono"></span>
+        <button id="em-ed-btn" class="btn" style="display:none;font-size:14px;padding:5px 8px;" title="Modifier les définitions">✏️</button>
+        <button id="em-btn-browse" class="btn" style="display:none;font-size:12px;padding:6px 10px;">Feuilleter</button>
+        <button id="em-btn-prev" class="btn btn-primary" style="display:none;font-size:16px;padding:5px 10px;" title="Précédent">←</button>
+        <button id="em-btn-next" class="btn btn-primary" style="display:none;font-size:16px;padding:5px 10px;" title="Suivant">→</button>
         <button id="em-btn-solutions" class="btn btn-primary" style="font-size:12px;padding:6px 12px;">Jouer</button>
         <button id="em-btn-back-game" class="btn" style="font-size:12px;padding:6px 12px;white-space:nowrap;">← Listes</button>
       </div>
@@ -699,6 +703,20 @@ body.kb-open .slot{min-height:28px;font-size:12px;}
       </div>
       <div class="inp-bar">
         <input id="em-saisie" type="text" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="Saisie…"/>
+      </div>
+    </div>
+  </div>
+  <!-- Éditeur ENTREMODS (stof2) -->
+  <div id="em-editor" style="display:none;" role="dialog" aria-modal="true">
+    <div class="gm-ed-panel">
+      <div class="gm-ed-hdr">
+        <span class="gm-ed-title">Modifier les définitions</span>
+        <button id="em-ed-close" class="btn" style="padding:4px 10px;font-size:17px;line-height:1;">×</button>
+      </div>
+      <div id="em-ed-defs" style="display:flex;flex-direction:column;gap:10px;padding:10px 0;"></div>
+      <div class="gm-ed-footer">
+        <button id="em-ed-cancel" class="btn" style="flex:1;padding:10px;">Annuler</button>
+        <button id="em-ed-save" class="btn btn-primary" style="flex:1;padding:10px;font-weight:800;">Sauvegarder</button>
       </div>
     </div>
   </div>
@@ -996,7 +1014,7 @@ body.kb-open .slot{min-height:28px;font-size:12px;}
   position:fixed;bottom:4px;left:8px;z-index:9999;
   font-size:9px;font-weight:700;color:rgba(255,255,255,.28);
   font-family:ui-monospace,monospace;letter-spacing:.04em;
-  pointer-events:none;user-select:none;">v3.17</div>
+  pointer-events:none;user-select:none;">v3.18</div>
 
 <script src="data.js"></script>
 <script src="themods_data.js"></script>

@@ -125,8 +125,12 @@ let emNoHelp=true;
 let emPhase="DONE";
 let emKb=null;
 let emInited=false;
+let emBrowse=false;
+let emBrowseIdx=0;
+let emBrowseSave=null;
 
 function emCurrentSession(){ return emCurrentSessions[emSessionIdx]||null; }
+function emIsEditor(){ return currentUser?.pseudo==='stof2'; }
 
 /* ── Chrono ── */
 let emChronoInterval=null;
@@ -219,7 +223,7 @@ function emRenderSlots(){
         if(settings.showDef){
           const b=document.createElement("button"); b.className="tool-btn"; b.textContent="📖";
           b.addEventListener("mousedown",e=>e.preventDefault());
-          b.addEventListener("click",()=>{ emNoHelp=false; emHintUsed[i]=true; const raw=(F[tIdx]||"").replace(/^(?:ou\s+)?\[[^\]]*\]\s*/i,"").trim(); openDefSimple(raw||canon); emRefocus(); });
+          b.addEventListener("click",()=>{ emNoHelp=false; emHintUsed[i]=true; const custom=(emState._customDefs||{})[canon]; const raw=custom||(F[tIdx]||"").replace(/^(?:ou\s+)?\[[^\]]*\]\s*/i,"").trim(); openDefSimple(raw||canon); emRefocus(); });
           tools.appendChild(b);
         }
         if(settings.showLen){
@@ -255,8 +259,91 @@ function emUpdateCounter(){
   if(c&&sess) c.textContent=emFound.size+"/"+sess.targetIdxs.length;
 }
 
+/* ── Browse + éditeur ── */
+function emUpdateGameBtn(){
+  const hasSess=emCurrentSessions.length>0;
+  const edBtn=document.getElementById("em-ed-btn");
+  const browseBtn=document.getElementById("em-btn-browse");
+  const prevBtn=document.getElementById("em-btn-prev");
+  const nextBtn=document.getElementById("em-btn-next");
+  if(edBtn) edBtn.style.display=(!emBrowse&&emIsEditor()&&hasSess)?"":"none";
+  if(browseBtn){
+    browseBtn.style.display=hasSess?"":"none";
+    browseBtn.textContent=emBrowse?"Arrêter":"Feuilleter";
+    browseBtn.className=emBrowse?"btn btn-danger":"btn";
+    browseBtn.style.fontSize="12px"; browseBtn.style.padding="6px 10px";
+  }
+  if(prevBtn){ prevBtn.style.display=emBrowse?"":"none"; prevBtn.disabled=(emBrowseIdx<=0); }
+  if(nextBtn){ nextBtn.style.display=emBrowse?"":"none"; nextBtn.disabled=(emBrowseIdx>=emCurrentSessions.length-1); }
+}
+function emStartBrowse(){
+  if(!emCurrentSessions.length) return;
+  emBrowseSave={sessionIdx:emSessionIdx,found:new Set(emFound),hintMode:[...emHintMode],hintUsed:[...emHintUsed],noHelp:emNoHelp,phase:emPhase};
+  emBrowse=true; emBrowseIdx=emSessionIdx;
+  emChronoStop();
+  emBrowseShowCurrent();
+}
+function emStopBrowse(){
+  emBrowse=false;
+  if(emBrowseSave){
+    emSessionIdx=emBrowseSave.sessionIdx;
+    emFound=emBrowseSave.found; emHintMode=emBrowseSave.hintMode; emHintUsed=emBrowseSave.hintUsed;
+    emNoHelp=emBrowseSave.noHelp; emPhase=emBrowseSave.phase;
+    emBrowseSave=null;
+  }
+  const list=emState?.lists?.[emCurrentListId];
+  const lbl=document.getElementById("em-game-title");
+  if(lbl&&list) lbl.textContent=list.name;
+  emRenderBounds(); emRenderSlots(); emUpdateCounter(); emChronoReset(); emUpdateBtn();
+  emSetMsg(emPhase==="WAITING"?"Prêt — appuie sur Jouer pour commencer.":"");
+  emUpdateGameBtn();
+}
+function emBrowseShowCurrent(){
+  emSessionIdx=emBrowseIdx;
+  const n=emCurrentSession()?.targetIdxs.length||0;
+  emFound=new Set([...Array(n).keys()]);
+  emHintMode=Array(n).fill("none"); emHintUsed=Array(n).fill(false);
+  emPhase="DONE";
+  emRenderBounds(); emRenderSlots(); emUpdateCounter();
+  const lbl=document.getElementById("em-game-title");
+  if(lbl) lbl.textContent=`${emBrowseIdx+1} / ${emCurrentSessions.length}`;
+  emUpdateGameBtn();
+}
+function emBrowseNext(){ if(emBrowseIdx<emCurrentSessions.length-1){ emBrowseIdx++; emBrowseShowCurrent(); } }
+function emBrowsePrev(){ if(emBrowseIdx>0){ emBrowseIdx--; emBrowseShowCurrent(); } }
+
+function emOpenEditor(){
+  const sess=emCurrentSession(); if(!sess) return;
+  const C=emC(), E=emE(), F=emF();
+  const container=document.getElementById("em-ed-defs"); if(!container) return;
+  container.innerHTML="";
+  sess.targetIdxs.forEach(tIdx=>{
+    const canon=C[tIdx], word=E[tIdx]||canon;
+    const custom=(emState._customDefs||{})[canon]||"";
+    const rawDef=(F[tIdx]||"").replace(/^(?:ou\s+)?\[[^\]]*\]\s*/i,"").trim();
+    const div=document.createElement("div"); div.style.cssText="display:flex;flex-direction:column;gap:4px;";
+    const lbl=document.createElement("div"); lbl.style.cssText="font-size:13px;font-weight:800;letter-spacing:.05em;color:var(--accent);";
+    lbl.textContent=word;
+    const ta=document.createElement("textarea"); ta.className="gm-ed-textarea"; ta.rows=2;
+    ta.dataset.canon=canon; ta.value=custom||rawDef;
+    div.appendChild(lbl); div.appendChild(ta); container.appendChild(div);
+  });
+  document.getElementById("em-editor").style.display="flex";
+}
+function emCloseEditor(){ document.getElementById("em-editor").style.display="none"; }
+function emSaveEditor(){
+  if(!emState._customDefs) emState._customDefs={};
+  document.querySelectorAll("#em-ed-defs textarea[data-canon]").forEach(ta=>{
+    const canon=ta.dataset.canon, val=ta.value.trim();
+    if(val) emState._customDefs[canon]=val; else delete emState._customDefs[canon];
+  });
+  emCloseEditor();
+  persistEntreModsState().catch(()=>{});
+}
+
 /* ── Flux de jeu ── */
 function emPrepareGame(listId,sessionIdx){
+  emBrowse=false; emBrowseSave=null;
   emCurrentListId=listId; emSessionIdx=sessionIdx;
   emFound=new Set();
   const n=emCurrentSession()?.targetIdxs.length||0;
@@ -265,6 +352,7 @@ function emPrepareGame(listId,sessionIdx){
   emRenderBounds(); emRenderSlots(); emUpdateCounter(); emChronoReset(); emUpdateBtn();
   emSetMsg("Prêt — appuie sur Jouer pour commencer.","");
   setDictBtnVisible(true);
+  emUpdateGameBtn();
   const s=emSessionState(listId,sessionIdx);
   if(s){ s.seen=true; s.lastSeen=todayStr(); }
   persistEntreModsState().catch(()=>{});
@@ -365,6 +453,7 @@ function emRenderHome(){
 
 function emOpenList(listId){
   emCurrentListId=listId;
+  emBrowse=false; emBrowseSave=null;
   const list=emState.lists[listId];
   emCurrentSessions=emGenerateSessions(list.minLen,list.maxLen,list.maxCluster);
   const titleEl=document.getElementById("em-game-title");
@@ -411,6 +500,7 @@ function initEntremods(){
   });
 
   const onSolBtn=()=>{
+    if(emBrowse){ emStopBrowse(); return; }
     if(emPhase==="PLAYING"){ emShowSolutions(); return; }
     if(emPhase==="DONE") emReplay();
     emLaunchGame();
@@ -421,8 +511,18 @@ function initEntremods(){
   document.getElementById("em-btn-new")?.addEventListener("click",()=>emShowCreate());
   document.getElementById("em-btn-back-create")?.addEventListener("click",()=>emRenderHome());
   document.getElementById("em-btn-back-game")?.addEventListener("click",()=>{
-    emChronoStop(); emRenderHome();
+    emChronoStop(); emBrowse=false; emBrowseSave=null; emRenderHome();
   });
+
+  document.getElementById("em-btn-browse")?.addEventListener("click",()=>{
+    if(emBrowse) emStopBrowse(); else emStartBrowse();
+  });
+  document.getElementById("em-btn-prev")?.addEventListener("click",emBrowsePrev);
+  document.getElementById("em-btn-next")?.addEventListener("click",emBrowseNext);
+  document.getElementById("em-ed-btn")?.addEventListener("click",emOpenEditor);
+  document.getElementById("em-ed-close")?.addEventListener("click",emCloseEditor);
+  document.getElementById("em-ed-cancel")?.addEventListener("click",emCloseEditor);
+  document.getElementById("em-ed-save")?.addEventListener("click",emSaveEditor);
 
   ["em-min-len","em-max-len","em-max-cluster"].forEach(id=>{
     document.getElementById(id)?.addEventListener("input",emUpdateCreatePreview);
