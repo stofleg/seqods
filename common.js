@@ -3,6 +3,21 @@
    COMMON.JS — Code partagé entre METHODS et THEMODS
 ══════════════════════════════════════════ */
 
+/* ── Correctif ordre ODS : formes fléchies après formes de base ── */
+(function fixOdsOrder(){
+  const D = window.SEQODS_DATA; if(!D) return;
+  const C=D.c, E=D.e||[], F=D.f||[];
+  for(let i=0; i<C.length-1; i++){
+    if(C[i]!==C[i+1]) continue;
+    const ei=(E[i]||C[i]), ej=(E[i+1]||C[i+1]);
+    if(ei.includes(',') && !ej.includes(',')){
+      // swap i et i+1
+      if(E.length){ const t=E[i]; E[i]=E[i+1]; E[i+1]=t; }
+      if(F.length){ const t=F[i]; F[i]=F[i+1]; F[i+1]=t; }
+    }
+  }
+})();
+
 /* ── Sélecteur ── */
 const $ = s => document.querySelector(s);
 
