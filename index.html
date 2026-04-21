@@ -1027,7 +1027,9 @@ sup.ana{font-size:.6em;font-weight:700;color:var(--muted);margin-left:0;vertical
 <script src="app.js"></script>
 <script>
 if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("./sw.js").catch(()=>{});
+  navigator.serviceWorker.register("./sw.js", {updateViaCache:"none"})
+    .then(reg=>reg.update())
+    .catch(()=>{});
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     window.location.reload();
   });
