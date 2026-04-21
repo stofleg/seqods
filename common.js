@@ -17,20 +17,16 @@
   }
 })();
 
-/* ── Index canoniques (partagé) ── */
-let _canonSet = null;
-function getCanonSet(){
-  if(!_canonSet) _canonSet = new Set(window.SEQODS_DATA?.c || []);
-  return _canonSet;
-}
+/* ── Dictionnaire complet (toutes formes fléchies) ── */
+function getDictArr(){ return window.SEQODS_DATA?.d || window.SEQODS_DATA?.c || []; }
 
 /* ── Index anagrammes ── */
 let _anaIdx = null;
 function getAnagramCount(canon){
   if(!_anaIdx){
     _anaIdx = new Map();
-    for(const c of getCanonSet()){
-      const key = c.split("").sort().join("");
+    for(const w of getDictArr()){
+      const key = w.split("").sort().join("");
       _anaIdx.set(key, (_anaIdx.get(key)||0)+1);
     }
   }
@@ -38,20 +34,17 @@ function getAnagramCount(canon){
   return (_anaIdx.get(key)||1)-1;
 }
 
-/* ── Rallonges (hooks) — toute extension valide en tête ou en queue ── */
-let _hookSet = null;
+/* ── Rallonges — scan lazy mémoïsé sur le dictionnaire complet ── */
+const _hookCache = new Map();
 function hasHook(canon){
-  if(!_hookSet){
-    _hookSet = new Set();
-    for(const w of getCanonSet()){
-      const n = w.length;
-      for(let i=1; i<n; i++){
-        _hookSet.add(w.slice(i));   // w est une extension-avant de w.slice(i)
-        _hookSet.add(w.slice(0,i)); // w est une extension-arrière de w.slice(0,i)
-      }
-    }
+  if(_hookCache.has(canon)) return _hookCache.get(canon);
+  const d = getDictArr();
+  let result = false;
+  for(const w of d){
+    if(w !== canon && (w.startsWith(canon) || w.endsWith(canon))){ result=true; break; }
   }
-  return _hookSet.has(canon);
+  _hookCache.set(canon, result);
+  return result;
 }
 
 /* ── Affichage mot + puce + exposant ── */
