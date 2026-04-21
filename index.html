@@ -516,6 +516,7 @@ body.kb-open .slot{min-height:28px;font-size:12px;}
 #v-entremods .slot.found-helped{border-color:rgba(255,167,50,.8);background:rgba(255,167,50,.2);}
 #v-entremods .slot.revealed{border-color:rgba(255,107,107,.7);background:rgba(255,107,107,.18);}
 sup.ana{font-size:.75em;font-weight:900;color:var(--muted);margin-left:0;vertical-align:super;line-height:1;}
+span.hook{color:var(--accent);font-size:.7em;font-weight:900;margin-right:0;vertical-align:middle;line-height:1;}
 
 /* Les vues couvrent tout l'écran (position:fixed;inset:0)
    On compense le notch avec du padding sur chaque vue */
@@ -1015,7 +1016,7 @@ sup.ana{font-size:.75em;font-weight:900;color:var(--muted);margin-left:0;vertica
   position:fixed;bottom:4px;left:8px;z-index:9999;
   font-size:9px;font-weight:700;color:rgba(255,255,255,.28);
   font-family:ui-monospace,monospace;letter-spacing:.04em;
-  pointer-events:none;user-select:none;">v3.26</div>
+  pointer-events:none;user-select:none;">v3.27</div>
 
 <script src="data.js"></script>
 <script src="themods_data.js"></script>
@@ -1027,7 +1028,7 @@ sup.ana{font-size:.75em;font-weight:900;color:var(--muted);margin-left:0;vertica
 <script src="app.js"></script>
 <script>
 if("serviceWorker" in navigator){
-  const CURRENT_CACHE="methods-v26";
+  const CURRENT_CACHE="methods-v27";
   function doRegister(){
     navigator.serviceWorker.register("./sw.js",{updateViaCache:"none"})
       .then(reg=>reg.update()).catch(()=>{});

@@ -17,22 +17,33 @@
   }
 })();
 
+/* ── Index canoniques (partagé) ── */
+let _canonSet = null;
+function getCanonSet(){
+  if(!_canonSet) _canonSet = new Set(window.SEQODS_DATA?.c || []);
+  return _canonSet;
+}
+
 /* ── Index anagrammes ── */
 let _anaIdx = null;
 function getAnagramCount(canon){
   if(!_anaIdx){
     _anaIdx = new Map();
-    const C = window.SEQODS_DATA?.c || [];
-    const seen = new Set();
-    for(const c of C){
-      if(seen.has(c)) continue;
-      seen.add(c);
+    for(const c of getCanonSet()){
       const key = c.split("").sort().join("");
       _anaIdx.set(key, (_anaIdx.get(key)||0)+1);
     }
   }
   const key = canon.split("").sort().join("");
   return (_anaIdx.get(key)||1)-1;
+}
+
+/* ── Rallonges (hooks) ── */
+const ALPHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+function hasHook(canon){
+  const S = getCanonSet();
+  for(const l of ALPHA) if(S.has(l+canon) || S.has(canon+l)) return true;
+  return false;
 }
 
 /* ── Sélecteur ── */
