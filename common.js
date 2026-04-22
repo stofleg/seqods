@@ -274,6 +274,22 @@ function _getIrregMap(){
 
   add('SAILLIR',['SAILLE','SAILLI','SAILLIRONT']);
 
+  add('TRAIRE',['TRAYAIT','TRAYAIENT','TRAYANT','TRAYONS','TRAYIEZ','TRAYIONS','TRAIENT']);
+
+  add('PAITRE',['PAISSAIT','PAISSAIENT','PAISSAIS','PAISSONS','PAISSEZ','PAISSENT','PAISSIONS','PAISSIEZ']);
+
+  add('ABSOUDRE',['ABSOLVAIT','ABSOLVAIENT','ABSOLVAIS','ABSOLVANT','ABSOLVE','ABSOLVENT',
+    'ABSOLVES','ABSOLVEZ','ABSOLVIEZ','ABSOLVIONS','ABSOLVONS','ABSOUTES','ABSOUTS']);
+
+  add('RESOUDRE',['RESOLVAIT','RESOLVAIENT','RESOLVAIS','RESOLVANT','RESOLVE','RESOLVENT',
+    'RESOLVES','RESOLVEZ','RESOLVIEZ','RESOLVIONS','RESOLVONS','RESOUTE','RESOUTES']);
+
+  add('ECHOIR',['ECHOIE','ECHOIENT','ECHOYAIT','ECHOYAIENT','ECHOYANT']);
+
+  add('BRAIRE',['BRAIENT']);
+
+  add('FOUTRE',['FOUT']);
+
   add('VIVRE',['VIVONS','VIVEZ','VIVENT',
     'VIVAIS','VIVAIT','VIVIONS','VIVIEZ','VIVAIENT',
     'VECUS','VECUT','VECUMES','VECUTES','VECURENT',
@@ -332,20 +348,39 @@ function findLemma(w){
     }
   }
 
-  // Strips réguliers
+  // Participes passés féminins : -EES/-EE (verbes -ER), -IES/-IE (verbes -IR)
+  for(const [sfx,vs] of [['EES',['ER']],['EE',['ER']],['IES',['IR','ER']],['IE',['IR','ER']]]){
+    if(w.endsWith(sfx) && w.length > sfx.length+2){
+      const st = w.slice(0,-sfx.length);
+      for(const v of vs){ if(cm.has(st+v)) return st+v; }
+    }
+  }
+
+  // Strips
   const ER_FUTURE = new Set(['ERAI','ERAS','ERA','ERONT','EREZ','ERONS','ERAIT','ERAIS','ERENT']);
-  const strips = ['AIENT','ANT','ERENT','ERONT','EREZ','ERONS','ERAIT','ERAIS','ERAI',
-    'AIT','AIS','ONS','ENT','EZ','AI','ISSANT','ISSONS','ISSEZ','ISSENT','ISSIONS','IT',
-    'EAUX','AUX','AS','A','ERA','ERAS','ES','S','X'];
+  const strips = [
+    // Subjonctif imparfait
+    'ASSENT','ASSIEZ','ASSIONS','ASSES','ASSE',
+    'USSENT','USSIEZ','USSIONS','USSES','USSE',
+    // Imparfait/formes en -ISS
+    'ISSAIENT','ISSAIT','ISSANT','ISSONS','ISSEZ','ISSENT','ISSIEZ','ISSIONS','ISSES','ISSE',
+    // Conditionnel / futur
+    'AIENT','ANT','ERENT','ERONT','EREZ','ERONS','ERAIT','ERAIS','ERAI',
+    // Passé simple manquants + subj. imp. 3s
+    'ATES','AMES','AT',
+    // Présent / imparfait courant
+    'AIT','AIS','IONS','IEZ','ONS','ONT','ENT','EZ','AI',
+    'IT','EAUX','AUX',
+    'AS','A','ERA','ERAS','ES','S','X'];
   for(const s of strips){
     if(!w.endsWith(s)) continue;
     const stem = w.slice(0,-s.length);
     if(stem.length<2) continue;
-    // Pour les terminaisons ER (futur/conditionnel), préférer stem+ER avant le stem nu
     if(ER_FUTURE.has(s)){
       if(cm.has(stem+'ER')) return stem+'ER';
       if(cm.has(stem+'IR')) return stem+'IR';
       if(cm.has(stem+'RE')) return stem+'RE';
+      if(cm.has(stem+'E'))  return stem+'E';
     }
     if(cm.has(stem)) return stem;
     if(im.has(stem)) return im.get(stem);
@@ -354,7 +389,31 @@ function findLemma(w){
     if(cm.has(stem+'ER')) return stem+'ER';
     if(cm.has(stem+'IR')) return stem+'IR';
     if(cm.has(stem+'RE')) return stem+'RE';
+    if(cm.has(stem+'E'))  return stem+'E';
   }
+
+  // Présent 1s/3s -ER et futurs -RE (CHANTE→CHANTER, COMMETTRA→COMMETTRE)
+  if(w.endsWith('E') && w.length > 3){
+    const st = w.slice(0,-1);
+    if(cm.has(st))        return st;
+    if(cm.has(st+'ER'))   return st+'ER';
+    if(cm.has(st+'RE'))   return st+'RE';
+  }
+
+  // Participes passés masc. en -U (ABSTENU→ABSTENIR, VAINCU→VAINCRE, VENDU→VENDRE)
+  if(w.endsWith('U') && w.length > 3){
+    const st = w.slice(0,-1);
+    if(cm.has(st+'IR')) return st+'IR';
+    if(cm.has(st+'RE')) return st+'RE';
+    if(cm.has(st+'ER')) return st+'ER';
+  }
+
+  // Participes passés masc. en -I (ABOLI→ABOLIR, ADOUCI→ADOUCIR)
+  if(w.endsWith('I') && w.length > 3){
+    const st = w.slice(0,-1);
+    if(cm.has(st+'IR')) return st+'IR';
+  }
+
   return null;
 }
 
