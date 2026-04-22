@@ -319,7 +319,7 @@ function openDef(canon, displayWord, defText){
   const idx = C.indexOf(canon);
   if(idx < 0 && defText === undefined){
     const lemma = findLemma(canon);
-    if(lemma && lemma !== canon){ openDef(lemma, displayWord); return; }
+    if(lemma && lemma !== canon){ openDef(lemma); return; }
   }
   const title = (displayWord || (idx>=0 ? E[idx].split(",")[0].trim() : canon)).replace(/\*/g,"");
   const def = (defText !== undefined) ? defText : (idx>=0 ? (F[idx]||"") : "");
