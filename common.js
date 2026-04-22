@@ -677,19 +677,24 @@ function openDef(canon, displayWord, defText, flechie){
     if(lst.length){ _renderWordLinks(rallEl, lst, "Rallonges"); }
   }
 
-  // Section forme fléchie (si différente du lemme)
+  // Section forme fléchie : soit redirect depuis conjugaison, soit entrée avec virgule (ex: PERLANT, E)
+  let flechieToShow = flechie || null;
+  if(!flechieToShow && idx >= 0 && E[idx]?.includes(',')){
+    const resolved = resolveInflectedCanon(canon, E[idx].split(',')[1]);
+    if(resolved && resolved !== canon) flechieToShow = resolved;
+  }
   const flechieEl = $("#def-flechie"); if(flechieEl) flechieEl.innerHTML="";
-  if(flechie && flechie !== canon && A && flechieEl){
-    const ftir = flechie.split("").sort((a,b)=>a.localeCompare(b,"fr")).join("");
-    const fAna = (A[ftir]||[]).filter(x=>norm(x)!==flechie).slice(0,60);
-    const fRal = R ? (R[flechie]||[]) : [];
+  if(flechieToShow && flechieToShow !== canon && A && flechieEl){
+    const ftir = flechieToShow.split("").sort((a,b)=>a.localeCompare(b,"fr")).join("");
+    const fAna = (A[ftir]||[]).filter(x=>norm(x)!==flechieToShow).slice(0,60);
+    const fRal = R ? (R[flechieToShow]||[]) : [];
     if(fAna.length || fRal.length){
       const sep = document.createElement("hr");
       sep.style.cssText = "border:none;border-top:1px solid var(--stroke);margin:12px 0 4px";
       flechieEl.appendChild(sep);
       const sub = document.createElement("p");
       sub.style.cssText = "font-size:11px;color:var(--muted);margin:0 0 2px";
-      sub.textContent = "Forme : " + flechie;
+      sub.textContent = "Forme : " + flechieToShow;
       flechieEl.appendChild(sub);
       if(fAna.length){
         const sec = document.createElement("div"); sec.className="modal-sec";
