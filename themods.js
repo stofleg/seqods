@@ -72,9 +72,9 @@ function getNormToF(){
   }
   return _normToF;
 }
-// Vrai si le mot fait >9 lettres ET sa définition contient "(p.p. inv.)"
+// Vrai si le mot fait ≥10 lettres ET sa définition contient "(p.p.inv.)"
 function isLongPpInv(n){
-  return n.length > 9 && getNormToF()[n].includes("(p.p. inv.)");
+  return n.length > 9 && (getNormToF()[n] || "").includes("(p.p.inv.)");
 }
 
 /* ── État jeu ── */
