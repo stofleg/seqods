@@ -8,6 +8,7 @@ const LS_THEMODS = () => "THEMODS_STATE_" + (currentUser?.pseudo||"guest");
 let tmState = null;
 let tmKb = null;
 let tmInited = false;
+let tmSolTimeout = null;
 
 function tmDefault(){ return {updatedAt:0, themes:{}}; }
 function tmLoadLocal(){ try{ return JSON.parse(localStorage.getItem(LS_THEMODS())||"null")||tmDefault(); }catch{ return tmDefault(); } }
@@ -71,9 +72,9 @@ function getNormToF(){
   }
   return _normToF;
 }
-// Vrai si le mot fait >9 lettres ET sa définition contient "(p.p. inv.)"
+// Vrai si le mot fait ≥10 lettres ET sa définition contient "(p.p.inv.)"
 function isLongPpInv(n){
-  return n.length > 9 && getNormToF()[n].includes("(p.p. inv.)");
+  return n.length > 9 && (getNormToF()[n] || "").includes("(p.p.inv.)");
 }
 
 /* ── État jeu ── */
@@ -260,6 +261,7 @@ function playTheme(theme){
 }
 
 function startSession(theme, session){
+  if(tmSolTimeout){ clearTimeout(tmSolTimeout); tmSolTimeout=null; }
   tmSession=session; tmFound=new Set(); tmSolutions=false; tmNoHelp=true; tmBrowse=false;
   const edBtn=document.getElementById("gm-ed-btn"); if(edBtn) edBtn.style.display="none";
   const delBtn=document.getElementById("dn-del-btn"); if(delBtn) delBtn.style.display="none";
@@ -470,10 +472,10 @@ function validateTmWord(raw){
     const inDict=getTmDict().has(n);
     if(!inDict){
       setTmMsg("Mot inconnu — la partie s'arrête.","err");
-      setTimeout(()=>showTmSolutions(),800);
+      tmSolTimeout = setTimeout(()=>showTmSolutions(),800);
     } else if(tmTheme==="vi" && !isLongPpInv(n)){
       setTmMsg("Mot valide — fin de session.","warn");
-      setTimeout(()=>showTmSolutions(),800);
+      tmSolTimeout = setTimeout(()=>showTmSolutions(),800);
     } else {
       setTmMsg("Hors-jeu — mot valide mais pas dans cette liste.","warn");
     }

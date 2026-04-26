@@ -474,7 +474,6 @@ window.THEMODS_DATA.vi = [
   {"label":"LI","words":["LIARDER"]},
   {"label":"LO","words":["LOFER", "LOQUETER", "LOUCHIR", "LOUVETER", "LOUVOYER"]},
   {"label":"LU","words":["LUIRE", "LUNCHER", "LUTTER"]},
-  {"label":"LY","words":["LYRER"]},
   {"label":"MA","words":["MARGAUDER", "MARGOTER", "MARGOTTER", "MARONNER", "MARRONNER"]},
   {"label":"ME","words":["MÉMÉRER", "MENTIR", "MERDOYER", "MÉSUSER", "MEUGLER"]},
   {"label":"MI","words":["MIAULER", "MILITER", "MINAUDER"]},
